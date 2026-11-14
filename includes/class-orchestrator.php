@@ -2597,6 +2597,10 @@ class JZSA_Shared_Albums {
 				$map[ $item['id'] ][ $item['video_rendition'] ] = $item['video'];
 				$lifetime = min( $lifetime, $this->media_url_lifetime( $item['video'] ) );
 			}
+			if ( ! empty( $item['alt_video'] ) ) {
+				$map[ $item['id'] ]['Original'] = $item['alt_video'];
+				$lifetime                       = min( $lifetime, $this->media_url_lifetime( $item['alt_video'] ) );
+			}
 		}
 		if ( PHP_INT_MAX === $lifetime ) {
 			$lifetime = self::MEDIA_URL_FALLBACK_TTL;
@@ -2812,6 +2816,12 @@ class JZSA_Shared_Albums {
 				if ( 'video' === $type && ! empty( $item['video'] ) ) {
 					$photo['type']  = 'video';
 					$photo['video'] = $this->stable_media_url( $item, $item['video_rendition'] ?? '', $item['video'] );
+				}
+				if ( $show_videos && 'video' !== $type && ! empty( $item['alt_video'] ) && ! empty( $item['alt_video_type'] ) ) {
+					// A movie most browsers cannot play (AVI, ...): the page turns it into a video
+					// only where the browser says it can play this type.
+					$photo['alt_video']      = $this->stable_media_url( $item, 'Original', $item['alt_video'] );
+					$photo['alt_video_type'] = $item['alt_video_type'];
 				}
 			} else {
 				$photo = array(

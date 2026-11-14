@@ -169,7 +169,7 @@ class RendererWarningsTest extends TestCase {
 
 		$html = $this->render( array( 'unplayable-videos' => array( 'MVI_6384.AVI', 'MVI_6385.AVI' ) ) );
 
-		$this->assertStringContainsString( '2 Videos Cannot Be Played', $html );
+		$this->assertStringContainsString( '2 Videos Do Not Play in Every Browser', $html );
 		$this->assertStringContainsString( '<code>MVI_6384.AVI</code>', $html );
 		$this->assertStringContainsString( 'MP4 or MOV', $html );
 		$this->assertStringContainsString( '#jzsa-plugin-cache', $html );
@@ -181,7 +181,7 @@ class RendererWarningsTest extends TestCase {
 
 		$html = $this->render( array( 'unplayable-videos' => array( 'a.avi', 'b.avi', 'c.avi', 'd.avi' ) ) );
 
-		$this->assertStringContainsString( '4 Videos Cannot Be Played', $html );
+		$this->assertStringContainsString( '4 Videos Do Not Play in Every Browser', $html );
 		$this->assertStringContainsString( '<code>c.avi</code> and 1 more', $html );
 		$this->assertStringNotContainsString( 'd.avi', $html );
 	}

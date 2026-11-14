@@ -1567,7 +1567,7 @@
                 containerId: $albumContainer.attr('id') || '',
                 mediaCount: response.data.photos.length
             });
-            return response.data.photos;
+            return applyBrowserPlayableVideos(response.data.photos);
         }).fail(function(jqXHR, textStatus, errorThrown) {
             traceVideoHeal('refresh-fetch-fail', {
                 reason: reason,
@@ -1657,6 +1657,60 @@
         return getContainerPhotos($container).map(function(photo) {
             return (photo && photo.id && freshById[photo.id]) ? freshById[photo.id] : photo;
         });
+    }
+
+    var _canPlayVideoType = {};
+
+    // Whether this browser says it can play a video MIME type, as iCloud web asks it.
+    function browserCanPlayVideoType(type) {
+        if (!type) {
+            return false;
+        }
+        if (Object.prototype.hasOwnProperty.call(_canPlayVideoType, type)) {
+            return _canPlayVideoType[type];
+        }
+        var answer = '';
+        try {
+            var probe = document.createElement('video');
+            answer = probe.canPlayType ? probe.canPlayType(type) : '';
+        } catch (e) {
+            answer = '';
+        }
+        _canPlayVideoType[type] = answer === 'maybe' || answer === 'probably';
+        return _canPlayVideoType[type];
+    }
+
+    // Movies most browsers cannot play (AVI from older cameras, ...) arrive as stills
+    // with alt_video. Where this browser can play them (Safari, for example), they
+    // become videos, the same way iCloud web decides.
+    function applyBrowserPlayableVideos(photos) {
+        if (!Array.isArray(photos)) {
+            return photos;
+        }
+        return photos.map(function(photo) {
+            if (!photo || photo.type === 'video' || !photo.alt_video || !browserCanPlayVideoType(photo.alt_video_type)) {
+                return photo;
+            }
+            var upgraded = $.extend({}, photo, { type: 'video', video: photo.alt_video });
+            delete upgraded.alt_video;
+            delete upgraded.alt_video_type;
+            return upgraded;
+        });
+    }
+
+    function upgradeContainerVideos($container) {
+        var photosJson = $container.attr('data-all-photos');
+        if (!photosJson || photosJson.indexOf('alt_video') === -1) {
+            return;
+        }
+        try {
+            var photos = JSON.parse(photosJson);
+            if (Array.isArray(photos)) {
+                $container.attr('data-all-photos', JSON.stringify(applyBrowserPlayableVideos(photos)));
+            }
+        } catch (e) {
+            // Leave the album as rendered.
+        }
     }
 
     function getContainerPhotos($container) {
@@ -1779,6 +1833,7 @@
             if (!response || !response.success || !response.data || !Array.isArray(response.data.photos)) {
                 return $.Deferred().reject('invalid-chunk-response').promise();
             }
+            response.data.photos = applyBrowserPlayableVideos(response.data.photos);
             return response.data;
         });
     }
@@ -10423,6 +10478,7 @@
 
         $galleries.each(function(index) {
             ensureGalleryId($(this), index + 1);
+            upgradeContainerVideos($(this));
             // Ask for direct media URLs right away, while the page is still settling.
             var directMediaRequest = getDirectMediaRequest($(this));
             if (directMediaRequest) {

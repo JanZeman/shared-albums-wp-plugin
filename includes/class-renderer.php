@@ -432,8 +432,8 @@ class JZSA_Renderer {
 	 * Render unplayable video warning (admins only)
 	 *
 	 * iCloud keeps some camera videos (AVI and similar) without any MP4 or MOV
-	 * rendition, so no browser can play them and the gallery shows their still.
-	 * iCloud web marks them with a warning icon too. The notice tells the admin
+	 * rendition. Only some browsers can play them; the others get their still,
+	 * where iCloud web shows a warning icon. The notice tells the admin
 	 * how to fix the album without having to ask for support.
 	 *
 	 * @param array $names Original filenames of the affected videos.
@@ -473,21 +473,21 @@ class JZSA_Renderer {
 			esc_html__( 'Warning (visible to administrators only):', 'janzeman-shared-albums-for-google-photos' ),
 			sprintf(
 				/* translators: %d: number of videos browsers cannot play. */
-				esc_html( _n( '%d Video Cannot Be Played', '%d Videos Cannot Be Played', $total, 'janzeman-shared-albums-for-google-photos' ) ),
+				esc_html( _n( '%d Video Does Not Play in Every Browser', '%d Videos Do Not Play in Every Browser', $total, 'janzeman-shared-albums-for-google-photos' ) ),
 				$total
 			),
-			esc_html__( 'This album contains videos in an old format, such as AVI from older cameras. Chrome, Firefox and Edge cannot play it. Only Safari can. The gallery therefore shows these videos as photos.', 'janzeman-shared-albums-for-google-photos' ),
+			esc_html__( 'This album contains videos in an old format, such as AVI from older cameras. Some browsers can play it, Safari for example. Others, like Chrome and Edge, cannot. Like iCloud web, the gallery plays these videos where the browser can and shows them as photos elsewhere.', 'janzeman-shared-albums-for-google-photos' ),
 			sprintf(
 				/* translators: %s: list of video filenames. */
 				esc_html__( 'Affected videos: %s.', 'janzeman-shared-albums-for-google-photos' ),
 				$list
 			),
-			esc_html__( 'How to fix it:', 'janzeman-shared-albums-for-google-photos' ),
+			esc_html__( 'To make them play everywhere:', 'janzeman-shared-albums-for-google-photos' ),
 			esc_html__( 'Convert the videos to MP4 or MOV, for example with QuickTime Player (File > Export As) or the free HandBrake.', 'janzeman-shared-albums-for-google-photos' ),
 			esc_html__( 'Replace the old videos in the album with the converted ones.', 'janzeman-shared-albums-for-google-photos' ),
 			esc_url( $cache_url ),
 			esc_html__( 'Clear the album cache on the Guide page.', 'janzeman-shared-albums-for-google-photos' ),
-			esc_html__( 'Converting pays off twice. The videos play everywhere, and they become many times smaller, so they load much faster. That is also why the plugin does not play the old format, not even in Safari.', 'janzeman-shared-albums-for-google-photos' )
+			esc_html__( 'Converting pays off twice. The videos play in every browser, and they become many times smaller, so they load much faster.', 'janzeman-shared-albums-for-google-photos' )
 		);
 	}
 

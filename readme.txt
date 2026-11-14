@@ -4,7 +4,7 @@ Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 3.0.6
+Stable tag: 3.0.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -137,6 +137,10 @@ Optional. Used only when a WordPress administrator opens the Community page or c
 Contact: support@janzeman.com
 
 == Changelog ==
+
+= 3.0.7 =
+* iCloud videos in older formats such as AVI, which iCloud keeps without an MP4 version, now play in browsers that support them (Safari, for example), like on iCloud web. Other browsers show them as photos.
+* The administrator warning about such videos now says which browsers can play them.
 
 = 3.0.6 =
 * Added an administrator-only warning when an iCloud album contains videos that most browsers cannot play (for example AVI from older cameras). It names the videos and explains how to convert them to MP4 or MOV.
@@ -350,6 +354,9 @@ Contact: support@janzeman.com
 * Responsive design with touch gestures
 
 == Upgrade Notice ==
+
+= 3.0.7 =
+Plays older iCloud videos such as AVI in browsers that support them, like iCloud web does.
 
 = 3.0.6 =
 Warns administrators when an iCloud album contains videos most browsers cannot play, with advice on how to fix them.

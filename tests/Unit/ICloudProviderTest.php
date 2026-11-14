@@ -511,6 +511,10 @@ class ICloudProviderTest extends TestCase {
 
 		$this->assertSame( 'image', $photos[0]['type'] );
 		$this->assertSame( 'MVI_6384.AVI', $photos[0]['unplayable_video'] );
+		// The original goes along so browsers that can play AVI (Safari) get the video, as on iCloud web.
+		$this->assertStringStartsWith( 'https://cvws.icloud-content.com/B/orig/', $photos[0]['alt_video'] );
+		$this->assertSame( 'video/avi', $photos[0]['alt_video_type'] );
+		$this->assertArrayNotHasKey( 'alt_video', $photos[1] );
 		$this->assertArrayNotHasKey( 'unplayable_video', $photos[1] );
 	}
 

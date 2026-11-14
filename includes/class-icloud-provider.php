@@ -31,23 +31,25 @@ class JZSA_ICloud_Provider {
 
 	/**
 	 * Movie originals (AVI, WMV, MPEG-1/2, Matroska, ...) that iCloud stores without
-	 * any MP4 or MOV rendition. Browsers cannot play them, so they are shown as
-	 * stills and flagged for the admin-only notice.
+	 * any MP4 or MOV rendition, with the MIME type a browser is asked about.
+	 * Like iCloud web, the gallery plays the original only where the browser says
+	 * it can (Safari, for example, plays AVI); elsewhere the item stays a still.
+	 * They are also flagged for the admin-only notice.
 	 */
 	const UNPLAYABLE_MOVIE_TYPES = array(
-		'public.avi',
-		'public.mpeg',
-		'public.mpeg-2-video',
-		'public.mpeg-2-transport-stream',
-		'public.3gpp',
-		'public.3gpp2',
-		'public.dv-movie',
-		'com.microsoft.windows-media-wmv',
-		'org.matroska.mkv',
-		'com.adobe.flash.video',
-		'org.webmproject.webm',
-		'public.movie',
-		'public.video',
+		'public.avi'                      => 'video/avi',
+		'public.mpeg'                     => 'video/mpeg',
+		'public.mpeg-2-video'             => 'video/mpeg',
+		'public.mpeg-2-transport-stream'  => 'video/mp2t',
+		'public.3gpp'                     => 'video/3gpp',
+		'public.3gpp2'                    => 'video/3gpp2',
+		'public.dv-movie'                 => 'video/x-dv',
+		'com.microsoft.windows-media-wmv' => 'video/x-ms-wmv',
+		'org.matroska.mkv'                => 'video/x-matroska',
+		'com.adobe.flash.video'           => 'video/x-flv',
+		'org.webmproject.webm'            => 'video/webm',
+		'public.movie'                    => '',
+		'public.video'                    => '',
 	);
 
 	/**
@@ -559,6 +561,7 @@ class JZSA_ICloud_Provider {
 
 			$video_rendition = '';
 			$video_type      = '';
+			$original_url    = '';
 
 			// A Live Photo is a still original with short movie renditions next to it
 			// (OriginalVidCompl, VidMed, VidSmall). Only an asset whose original is a
@@ -576,6 +579,10 @@ class JZSA_ICloud_Provider {
 				$width  = isset( $master[ 'res' . $name . 'Width' ]['value'] ) ? (int) $master[ 'res' . $name . 'Width' ]['value'] : 0;
 				$height = isset( $master[ 'res' . $name . 'Height' ]['value'] ) ? (int) $master[ 'res' . $name . 'Height' ]['value'] : 0;
 				$url    = str_replace( '${f}', rawurlencode( $this->rendition_filename( $filename, $type ) ), $field['value']['downloadURL'] );
+
+				if ( 'Original' === $name ) {
+					$original_url = $url;
+				}
 
 				if ( in_array( $type, self::MOVIE_TYPES, true ) ) {
 					if ( $is_still ) {
@@ -650,10 +657,15 @@ class JZSA_ICloud_Provider {
 				$item['video']           = $video;
 				$item['video_rendition'] = $video_rendition;
 			}
-			if ( '' === $video && $is_still && ( in_array( $original_type, self::UNPLAYABLE_MOVIE_TYPES, true ) || preg_match( '/[.-](movie|video)$/', $original_type ) ) ) {
-				// Admin hint only: the plugin shows these as photos (iCloud web shows a warning icon).
-				// Keep the original name (MVI_0001.AVI), not the .jpg name the still downloads as.
+			if ( '' === $video && $is_still && ( isset( self::UNPLAYABLE_MOVIE_TYPES[ $original_type ] ) || preg_match( '/[.-](movie|video)$/', $original_type ) ) ) {
+				// Keep the original name (MVI_0001.AVI) for the admin notice, not the .jpg name the still downloads as.
 				$item['unplayable_video'] = '' !== $filename ? $filename : $original_type;
+				$mime                     = self::UNPLAYABLE_MOVIE_TYPES[ $original_type ] ?? '';
+				if ( '' !== $original_url && '' !== $mime ) {
+					// The page plays it only where the browser can (canPlayType), as iCloud web does.
+					$item['alt_video']      = $original_url;
+					$item['alt_video_type'] = $mime;
+				}
 			}
 			if ( '' !== $filename ) {
 				// Name the file after what a download gets: the video, or the largest image rendition.
