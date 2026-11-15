@@ -320,6 +320,25 @@ class ICloudProviderTest extends TestCase {
 		$this->assertSame( '', $orchestrator->resolve_media_url( self::CLOUDKIT_ALBUM_URL, 'A1', 'Missing' ) );
 	}
 
+	public function test_media_refresh_drops_the_album_cache_when_items_changed_in_icloud(): void {
+		$cache_key = 'jzsa_album_' . md5( self::CLOUDKIT_ALBUM_URL );
+		$this->stubCloudKitAlbum();
+
+		// The cache still lists an item that was replaced in iCloud (a new ID).
+		$GLOBALS['jzsa_test_transients'][ $cache_key ] = array( 'photos' => array( array( 'id' => 'A1' ), array( 'id' => 'OLD' ), array( 'id' => 'A3' ) ) );
+		( new JZSA_Shared_Albums( JZSA_PLUGIN_FILE ) )->resolve_media_url( self::CLOUDKIT_ALBUM_URL, 'OLD', 'JPEGThumb' );
+		$this->assertArrayNotHasKey( $cache_key, $GLOBALS['jzsa_test_transients'] );
+	}
+
+	public function test_media_refresh_keeps_the_album_cache_when_items_are_unchanged(): void {
+		$cache_key = 'jzsa_album_' . md5( self::CLOUDKIT_ALBUM_URL );
+		$this->stubCloudKitAlbum();
+
+		$GLOBALS['jzsa_test_transients'][ $cache_key ] = array( 'photos' => array( array( 'id' => 'A3' ), array( 'id' => 'A2' ), array( 'id' => 'A1' ) ) );
+		( new JZSA_Shared_Albums( JZSA_PLUGIN_FILE ) )->resolve_media_url( self::CLOUDKIT_ALBUM_URL, 'A1', 'JPEGThumb' );
+		$this->assertArrayHasKey( $cache_key, $GLOBALS['jzsa_test_transients'] );
+	}
+
 	public function test_media_redirect_refuses_albums_the_plugin_has_not_rendered(): void {
 		$orchestrator = new JZSA_Shared_Albums( JZSA_PLUGIN_FILE );
 		$this->stubCloudKitAlbum();

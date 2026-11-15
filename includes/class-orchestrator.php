@@ -2606,6 +2606,8 @@ class JZSA_Shared_Albums {
 			$lifetime = self::MEDIA_URL_FALLBACK_TTL;
 		}
 
+		$this->drop_album_cache_if_changed( $album_url, array_keys( $map ) );
+
 		$stored = array(
 			'urls'        => $map,
 			'fresh_until' => time() + $lifetime,
@@ -2614,6 +2616,43 @@ class JZSA_Shared_Albums {
 		set_transient( $map_key, $stored, max( 60, $lifetime + self::MEDIA_URL_EXPIRY_BUFFER - 30 ) );
 
 		return $stored;
+	}
+
+	/**
+	 * Drop the album cache when the album's items changed in iCloud.
+	 *
+	 * The media map is fetched fresh every few minutes, while the album cache
+	 * lasts days. When items were deleted, added or replaced (for example a
+	 * video converted to MP4 has a new ID), the cached gallery would keep
+	 * pointing at items that no longer exist. The next page view then fetches
+	 * the album again. The long-lived backup is kept for outages.
+	 *
+	 * @param string $album_url Album URL.
+	 * @param array  $fresh_ids Item IDs iCloud returned just now.
+	 * @return bool Whether the cache was dropped.
+	 */
+	private function drop_album_cache_if_changed( $album_url, $fresh_ids ) {
+		$cached = get_transient( $this->get_cache_key( $album_url ) );
+		if ( ! is_array( $cached ) || empty( $cached['photos'] ) || ! is_array( $cached['photos'] ) ) {
+			return false;
+		}
+
+		$cached_ids = array();
+		foreach ( $cached['photos'] as $item ) {
+			if ( is_array( $item ) && ! empty( $item['id'] ) ) {
+				$cached_ids[] = (string) $item['id'];
+			}
+		}
+
+		$fresh_ids = array_map( 'strval', $fresh_ids );
+		sort( $cached_ids );
+		sort( $fresh_ids );
+		if ( $cached_ids === $fresh_ids ) {
+			return false;
+		}
+
+		delete_transient( $this->get_cache_key( $album_url ) );
+		return true;
 	}
 
 	/**

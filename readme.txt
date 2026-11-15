@@ -4,7 +4,7 @@ Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 3.0.7
+Stable tag: 3.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -137,6 +137,9 @@ Optional. Used only when a WordPress administrator opens the Community page or c
 Contact: support@janzeman.com
 
 == Changelog ==
+
+= 3.0.8 =
+* iCloud albums now notice within minutes when items were deleted, added or replaced in iCloud (for example a video converted to MP4), and load the album again instead of showing broken thumbnails until the album cache expires.
 
 = 3.0.7 =
 * iCloud videos in older formats such as AVI, which iCloud keeps without an MP4 version, now play in browsers that support them (Safari, for example), like on iCloud web. Other browsers show them as photos.
@@ -354,6 +357,9 @@ Contact: support@janzeman.com
 * Responsive design with touch gestures
 
 == Upgrade Notice ==
+
+= 3.0.8 =
+iCloud albums pick up deleted, added or replaced items within minutes.
 
 = 3.0.7 =
 Plays older iCloud videos such as AVI in browsers that support them, like iCloud web does.
