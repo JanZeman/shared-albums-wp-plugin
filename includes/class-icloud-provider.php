@@ -657,6 +657,11 @@ class JZSA_ICloud_Provider {
 				$item['video']           = $video;
 				$item['video_rendition'] = $video_rendition;
 			}
+			// Video length in seconds (CloudKit stores milliseconds), for the gallery's duration label.
+			$duration_ms = isset( $fields['duration']['value'] ) ? (int) $fields['duration']['value'] : 0;
+			if ( $duration_ms > 0 && ( '' !== $video || isset( self::UNPLAYABLE_MOVIE_TYPES[ $original_type ] ) ) ) {
+				$item['duration'] = round( $duration_ms / 1000, 1 );
+			}
 			if ( '' === $video && $is_still && ( isset( self::UNPLAYABLE_MOVIE_TYPES[ $original_type ] ) || preg_match( '/[.-](movie|video)$/', $original_type ) ) ) {
 				// Keep the original name (MVI_0001.AVI) for the admin notice, not the .jpg name the still downloads as.
 				$item['unplayable_video'] = '' !== $filename ? $filename : $original_type;

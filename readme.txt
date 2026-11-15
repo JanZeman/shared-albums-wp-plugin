@@ -139,6 +139,7 @@ Contact: support@janzeman.com
 == Changelog ==
 
 = 3.0.8 =
+* Added gallery-video-tile="thumbnail": video tiles show a plain thumbnail with the video length in the bottom-right corner, like iCloud Photos, and open like a photo (per lightbox-toggle), where the video starts playing. The default "player" keeps today's small players in the tiles.
 * iCloud albums now notice within minutes when items were deleted, added or replaced in iCloud (for example a video converted to MP4), and load the album again instead of showing broken thumbnails until the album cache expires.
 
 = 3.0.7 =
@@ -359,7 +360,7 @@ Contact: support@janzeman.com
 == Upgrade Notice ==
 
 = 3.0.8 =
-iCloud albums pick up deleted, added or replaced items within minutes.
+Adds gallery-video-tile="thumbnail" for iCloud-style video thumbnails, and iCloud albums pick up deleted, added or replaced items within minutes.
 
 = 3.0.7 =
 Plays older iCloud videos such as AVI in browsers that support them, like iCloud web does.

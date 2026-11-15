@@ -1080,6 +1080,7 @@ class JZSA_Shared_Albums {
 			// Gallery mode (thumbnail layout)
 			'gallery-layout'         => $this->parse_gallery_layout( $atts ),
 			'gallery-sizing'         => $this->parse_gallery_sizing( $atts ),
+			'gallery-video-tile'     => $this->parse_gallery_video_tile( $atts ),
 			'gallery-columns'        => $this->parse_gallery_int( $atts, 'gallery-columns', 3 ),
 			'gallery-columns-tablet' => $this->parse_gallery_int( $atts, 'gallery-columns-tablet', 2 ),
 			'gallery-columns-mobile' => $this->parse_gallery_int( $atts, 'gallery-columns-mobile', 1 ),
@@ -1911,6 +1912,21 @@ class JZSA_Shared_Albums {
 		}
 
 		return 'grid';
+	}
+
+	/**
+	 * Parse gallery-video-tile attribute.
+	 *
+	 * "player" (default) makes each video tile a small player; "thumbnail" makes it
+	 * a plain thumbnail with the video length, opened and played like a photo.
+	 *
+	 * @param array $atts Attributes.
+	 * @return string 'player' or 'thumbnail'
+	 */
+	private function parse_gallery_video_tile( $atts ) {
+		$value = isset( $atts['gallery-video-tile'] ) ? strtolower( trim( (string) $atts['gallery-video-tile'] ) ) : '';
+
+		return 'thumbnail' === $value ? 'thumbnail' : 'player';
 	}
 
 	/**
@@ -2888,7 +2904,7 @@ class JZSA_Shared_Albums {
 
 			// Pass through metadata fields extracted from album HTML.
 			if ( is_array( $item ) ) {
-				foreach ( array( 'id', 'filename', 'timestamp', 'width', 'height', 'filesize', 'description', 'camera', 'camera_make', 'camera_model', 'exif', 'aperture', 'shutter', 'focal', 'iso' ) as $meta_key ) {
+				foreach ( array( 'id', 'filename', 'timestamp', 'width', 'height', 'filesize', 'duration', 'description', 'camera', 'camera_make', 'camera_model', 'exif', 'aperture', 'shutter', 'focal', 'iso' ) as $meta_key ) {
 					// Note: 'id' is the AF1Qip… media ID, needed by Wave 2 JS for individual photo page fetching.
 						if ( isset( $item[ $meta_key ] ) ) {
 							$photo[ $meta_key ] = $item[ $meta_key ];

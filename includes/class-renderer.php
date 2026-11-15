@@ -43,6 +43,10 @@ class JZSA_Renderer {
 			$html .= $this->render_unknown_attribute_notice( $config['unknown-attributes'] );
 		}
 
+		if ( isset( $config['mode'] ) && 'gallery' === $config['mode'] && isset( $config['gallery-video-tile'] ) && 'thumbnail' === $config['gallery-video-tile'] && 'player' === $this->effective_gallery_video_tile( $config ) && is_user_logged_in() && current_user_can( jzsa_get_admin_capability() ) ) {
+			$html .= $this->render_video_tile_fallback_notice();
+		}
+
 		if ( ! empty( $config['unplayable-videos'] ) && is_user_logged_in() && current_user_can( jzsa_get_admin_capability() ) ) {
 			$html .= $this->render_unplayable_video_notice( $config['unplayable-videos'] );
 		}
@@ -425,6 +429,48 @@ class JZSA_Renderer {
 			esc_html__( 'Warning (visible to administrators only):', 'janzeman-shared-albums-for-google-photos' ),
 			esc_html__( 'Mosaic Requires Slider or Carousel Mode', 'janzeman-shared-albums-for-google-photos' ),
 			esc_html__( 'The mosaic="true" parameter only works with mode="slider" or mode="carousel". It is ignored in the default gallery mode. Please add mode="slider" or mode="carousel" to your shortcode.', 'janzeman-shared-albums-for-google-photos' )
+		);
+	}
+
+	/**
+	 * Video tile style the gallery really uses.
+	 *
+	 * A thumbnail tile only opens the viewer, so without lightbox and fullscreen
+	 * the video could not be played at all; the tile stays a player then.
+	 *
+	 * @param array $config Configuration.
+	 * @return string 'player' or 'thumbnail'
+	 */
+	private function effective_gallery_video_tile( $config ) {
+		if ( ! isset( $config['gallery-video-tile'] ) || 'thumbnail' !== $config['gallery-video-tile'] ) {
+			return 'player';
+		}
+		$lightbox   = isset( $config['lightbox-toggle'] ) ? $config['lightbox-toggle'] : 'disabled';
+		$fullscreen = isset( $config['fullscreen-toggle'] ) ? $config['fullscreen-toggle'] : 'disabled';
+		if ( 'disabled' === $lightbox && 'disabled' === $fullscreen ) {
+			return 'player';
+		}
+		if ( ! empty( $config['interaction-lock'] ) ) {
+			return 'player';
+		}
+
+		return 'thumbnail';
+	}
+
+	/**
+	 * Render the notice that gallery-video-tile="thumbnail" was ignored (admins only).
+	 *
+	 * @return string HTML
+	 */
+	private function render_video_tile_fallback_notice() {
+		return sprintf(
+			'<div class="jzsa-warning" style="border: 2px solid #f0ad4e; border-radius: 4px; padding: 12px; margin: 8px; background: #fff9e6; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">' .
+			'<p style="margin: 0 0 6px 0; color: #856404; font-size: 13px; font-weight: 600;">%s %s</p>' .
+			'<p style="margin: 0; color: #856404; font-size: 12px; line-height: 1.5;">%s</p>' .
+			'</div>',
+			esc_html__( 'Warning (visible to administrators only):', 'janzeman-shared-albums-for-google-photos' ),
+			esc_html__( 'Video Tiles Stay Players', 'janzeman-shared-albums-for-google-photos' ),
+			esc_html__( 'gallery-video-tile="thumbnail" needs a way to open the video. Lightbox and fullscreen are both disabled here (or the gallery is locked), so the video tiles stay small players. Enable lightbox-toggle or fullscreen-toggle to use thumbnails.', 'janzeman-shared-albums-for-google-photos' )
 		);
 	}
 
@@ -1135,6 +1181,10 @@ class JZSA_Renderer {
 		// Canonical gallery-* attributes.
 		$attrs[] = sprintf( 'data-gallery-layout="%s"', esc_attr( $gallery_layout ) );
 		$attrs[] = sprintf( 'data-gallery-sizing="%s"', esc_attr( $gallery_sizing ) );
+		if ( 'thumbnail' === $this->effective_gallery_video_tile( $config ) ) {
+			// Only when switched on, so existing galleries keep their exact markup.
+			$attrs[] = 'data-gallery-video-tile="thumbnail"';
+		}
 		$attrs[] = sprintf( 'data-gallery-columns="%d"', $gallery_columns );
 		$attrs[] = sprintf( 'data-gallery-columns-tablet="%d"', $gallery_columns_t );
 		$attrs[] = sprintf( 'data-gallery-columns-mobile="%d"', $gallery_columns_m );

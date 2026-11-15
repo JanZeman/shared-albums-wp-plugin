@@ -2663,7 +2663,15 @@
         $wrapper.append('<span class="jzsa-video-duration">' + durationText + '</span>');
     }
 
-    /** Apply cached durations to matching video wrappers in scope. */
+    // Duration label of a gallery video tile shown as a thumbnail (gallery-video-tile="thumbnail").
+    // iCloud sends the length; otherwise it is filled in by the duration prefetch.
+    function buildVideoTileDurationHtml(photo) {
+        var seconds = photo && parseFloat(photo.duration);
+        var text = seconds > 0 ? formatDurationText(seconds) : '';
+        return '<span class="jzsa-gallery-video-duration" data-video-src="' + jzsaEscapeAttr((photo && photo.video) || '') + '">' + text + '</span>';
+    }
+
+    /** Apply cached durations to matching video wrappers and thumbnail tiles in scope. */
     function applyDurationLabels($scope) {
         var $videos = $scope ? $scope.find('video.jzsa-video-player') : $('video.jzsa-video-player');
         $videos.each(function() {
@@ -2672,6 +2680,13 @@
                 return;
             }
             applyDurationLabelToVideo(this, durationCache[src]);
+        });
+        var $labels = $scope ? $scope.find('.jzsa-gallery-video-duration') : $('.jzsa-gallery-video-duration');
+        $labels.each(function() {
+            var src = this.getAttribute('data-video-src');
+            if (!this.textContent && src && durationCache[src]) {
+                this.textContent = durationCache[src];
+            }
         });
     }
 
@@ -2737,6 +2752,12 @@
         var $videos = $scope ? $scope.find('video.jzsa-video-player') : $('video.jzsa-video-player');
         $videos.each(function() {
             queueDurationPrefetch(getVideoSrc(this));
+        });
+        var $labels = $scope ? $scope.find('.jzsa-gallery-video-duration') : $('.jzsa-gallery-video-duration');
+        $labels.each(function() {
+            if (!this.textContent) {
+                queueDurationPrefetch(this.getAttribute('data-video-src'));
+            }
         });
 
         if (!durationQueue.length) {
@@ -7966,19 +7987,21 @@
         var showThumbLink = $container.attr('data-show-link-button') === 'true' && notLocked;
         var showThumbDownload = $container.attr('data-show-download-button') === 'true' && notLocked;
         var thumbAlbumUrl = $container.attr('data-album-url') || '';
+        var videoTilesAreThumbnails = $container.attr('data-gallery-video-tile') === 'thumbnail';
 
         var html = '';
         pageItems.forEach(function(item) {
             var photo = item.photo;
             var globalIndex = item.index;
             var isVideo = photo.type === 'video';
+            var videoAsThumb = isVideo && videoTilesAreThumbnails;
             var baseSrc = photo.preview || photo.full;
-            var src = isVideo ? baseSrc : directMediaUrl(baseSrc);
-            var itemClass = 'jzsa-gallery-item' + (isVideo ? ' jzsa-gallery-item-video' : '');
+            var src = isVideo && !videoAsThumb ? baseSrc : directMediaUrl(baseSrc);
+            var itemClass = 'jzsa-gallery-item' + (isVideo ? (videoAsThumb ? ' jzsa-gallery-item-video-thumb' : ' jzsa-gallery-item-video') : '');
             var mediaLabel = isVideo ? 'video' : 'photo';
             var mediaHtml;
 
-            if (isVideo) {
+            if (isVideo && !videoAsThumb) {
                 var videoSrc = photo.video || src;
                 mediaHtml = buildVideoHtml({ src: videoSrc, poster: src, mediaIndex: globalIndex });
             } else {
@@ -7991,7 +8014,8 @@
                     ' draggable="false"' +
                     (IS_IOS ? '' : ' loading="lazy"') +
                     ' decoding="' + (IS_IOS ? 'sync' : 'async') + '"' +
-                    ' referrerpolicy="no-referrer"' + tileStyleAttr + '>';
+                    ' referrerpolicy="no-referrer"' + tileStyleAttr + '>' +
+                    (videoAsThumb ? buildVideoTileDurationHtml(photo) : '');
             }
 
             var thumbOverlayBtns = '';
@@ -8096,6 +8120,7 @@
         var showThumbLink = $container.attr('data-show-link-button') === 'true' && notLocked;
         var showThumbDownload = $container.attr('data-show-download-button') === 'true' && notLocked;
         var thumbAlbumUrl = $container.attr('data-album-url') || '';
+        var videoTilesAreThumbnails = $container.attr('data-gallery-video-tile') === 'thumbnail';
         var html = '';
         rows.forEach(function(row) {
             var totalRatio    = row.reduce(function(sum, item) { return sum + item.ratio; }, 0);
@@ -8107,11 +8132,12 @@
                 var width = Math.round((item.ratio / totalRatio) * availableWidth);
                 var src   = item.photo.preview || item.photo.full;
                 var isVideo = item.photo.type === 'video';
-                var itemClass = 'jzsa-gallery-item' + (isVideo ? ' jzsa-gallery-item-video' : '');
+                var videoAsThumb = isVideo && videoTilesAreThumbnails;
+                var itemClass = 'jzsa-gallery-item' + (isVideo ? (videoAsThumb ? ' jzsa-gallery-item-video-thumb' : ' jzsa-gallery-item-video') : '');
                 var mediaLabel = isVideo ? 'video' : 'photo';
                 var mediaHtml;
 
-                if (isVideo) {
+                if (isVideo && !videoAsThumb) {
                     var videoSrc = item.photo.video || src;
                     mediaHtml = buildVideoHtml({ src: videoSrc, poster: src, mediaIndex: item.index });
                 } else {
@@ -8125,7 +8151,8 @@
                         (IS_IOS ? '' : ' loading="lazy"') +
                         ' decoding="' + (IS_IOS ? 'sync' : 'async') + '"' +
                         ' referrerpolicy="no-referrer"' +
-                        ' style="width:100%;height:100%;">';
+                        ' style="width:100%;height:100%;">' +
+                        (videoAsThumb ? buildVideoTileDurationHtml(item.photo) : '');
                 }
 
                 var thumbOverlayBtns = '';
@@ -10020,6 +10047,27 @@
                 toggleLightbox($slideshow[0], showHintsOnGalleryLightbox);
             } else {
                 toggleFullscreen($slideshow[0], showHintsOnGalleryFullscreen);
+            }
+
+            // A thumbnail video tile has no player of its own: the video starts in the viewer.
+            var openedPhoto = getContainerPhotos($container)[safeIndex];
+            if ($container.attr('data-gallery-video-tile') === 'thumbnail' && openedPhoto && openedPhoto.type === 'video') {
+                startActiveSlideVideo($slideshow, 0);
+            }
+        }
+
+        // Press the active slide's play button once its player exists (right away
+        // when possible, so the click still counts as the user's gesture for autoplay).
+        function startActiveSlideVideo($slideshowEl, attempt) {
+            var $play = $slideshowEl.find('.swiper-slide-active .plyr__control--overlaid').first();
+            if ($play.length) {
+                $play.trigger('click');
+                return;
+            }
+            if (attempt < 10) {
+                setTimeout(function() {
+                    startActiveSlideVideo($slideshowEl, attempt + 1);
+                }, 100);
             }
         }
 

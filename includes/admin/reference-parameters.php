@@ -148,6 +148,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 								<td>0-100</td>
 								<td>6</td>
 							</tr>
+							<tr>
+								<td><code>gallery-video-tile</code></td>
+								<td><?php esc_html_e( 'How video tiles look and behave. "player" makes each video tile a small player with a large play button. "thumbnail" shows a plain thumbnail with the video length in the bottom-right corner, like iCloud Photos; the tile then opens like a photo (per lightbox-toggle and fullscreen-toggle) and the video starts playing there. Needs the lightbox or fullscreen; otherwise the tiles stay players.', 'janzeman-shared-albums-for-google-photos' ); ?></td>
+								<td><code>player</code>, <code>thumbnail</code></td>
+								<td>player</td>
+							</tr>
 						</tbody>
 					</table>
 

@@ -1031,6 +1031,7 @@ class JZSA_Shortcode_Tools {
 			'gallery-gap',
 			'gallery-caption',
 			'gallery-caption-gap',
+			'gallery-video-tile',
 			'gallery-buttons-on-mobile',
 
 			// Inline mosaic.

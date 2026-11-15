@@ -77,6 +77,24 @@ class RendererGalleryTest extends TestCase {
         $this->assertStringContainsString( 'data-gallery-sizing="fixed"', $html );
     }
 
+    public function test_gallery_video_tile_player_keeps_the_markup_unchanged(): void {
+        $this->assertStringNotContainsString( 'data-gallery-video-tile', $this->render() );
+        $this->assertStringNotContainsString( 'data-gallery-video-tile', $this->render( [ 'gallery-video-tile' => 'player', 'lightbox-toggle' => 'click' ] ) );
+    }
+
+    public function test_gallery_video_tile_thumbnail_needs_a_viewer(): void {
+        $with_lightbox = $this->render( [ 'gallery-video-tile' => 'thumbnail', 'lightbox-toggle' => 'click', 'fullscreen-toggle' => 'disabled' ] );
+        $this->assertStringContainsString( 'data-gallery-video-tile="thumbnail"', $with_lightbox );
+
+        $GLOBALS['jzsa_test_is_user_logged_in'] = true;
+        $GLOBALS['jzsa_test_current_user_can']  = true;
+        $without_viewer = $this->render( [ 'gallery-video-tile' => 'thumbnail', 'lightbox-toggle' => 'disabled', 'fullscreen-toggle' => 'disabled' ] );
+        $GLOBALS['jzsa_test_is_user_logged_in'] = false;
+        $GLOBALS['jzsa_test_current_user_can']  = false;
+        $this->assertStringNotContainsString( 'data-gallery-video-tile', $without_viewer );
+        $this->assertStringContainsString( 'Video Tiles Stay Players', $without_viewer );
+    }
+
     // -------------------------------------------------------------------------
     // Gallery columns (default 3/2/1)
     // -------------------------------------------------------------------------

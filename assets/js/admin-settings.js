@@ -555,7 +555,7 @@ var JZSA_KNOWN_PARAMS = [
 	'gallery-buttons-on-mobile', 'gallery-caption', 'gallery-caption-gap', 'gallery-columns', 'gallery-columns-mobile',
 	'gallery-columns-tablet', 'gallery-gap', 'gallery-info-bottom',
 	'gallery-info-bottom-halo-effect', 'gallery-layout', 'gallery-row-height',
-	'gallery-rows', 'gallery-scrollable', 'gallery-sizing', 'height', 'image-fit',
+	'gallery-rows', 'gallery-scrollable', 'gallery-sizing', 'gallery-video-tile', 'height', 'image-fit',
 	'info-bottom', 'info-bottom-halo-effect', 'info-bottom-text-align',
 	'info-font-color', 'info-font-family', 'info-font-size', 'info-halo-effect',
 	'info-text-align', 'info-top', 'info-top-halo-effect', 'info-top-secondary',
@@ -686,6 +686,7 @@ var JZSA_VALUE_RULES = ( function () {
 		{ type: 'enum', values: [ 'cover', 'contain' ] } );
 	add( [ 'gallery-layout' ], { type: 'enum', values: [ 'grid', 'justified' ] } );
 	add( [ 'gallery-sizing' ], { type: 'enum', values: [ 'ratio', 'fill' ] } );
+	add( [ 'gallery-video-tile' ], { type: 'enum', values: [ 'player', 'thumbnail' ] } );
 	add( [ 'gallery-buttons-on-mobile' ],
 		{ type: 'enum', values: [ 'on-interaction', 'always' ] } );
 	add( [

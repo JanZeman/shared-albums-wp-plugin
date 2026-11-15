@@ -335,8 +335,12 @@ class OrchestratorConfigTest extends TestCase {
                 'gallery-rows'              => '9999',
                 'gallery-gap'               => '999',
                 'gallery-buttons-on-mobile' => 'sometimes',
+                'gallery-video-tile'        => 'poster',
             )
         );
+
+        $this->assertSame( 'player', $config['gallery-video-tile'] );
+        $this->assertSame( 'thumbnail', $this->config( array( 'gallery-video-tile' => ' Thumbnail ' ) )['gallery-video-tile'] );
 
         $this->assertSame( 'grid', $config['gallery-layout'] );
         $this->assertSame( 'ratio', $config['gallery-sizing'] );

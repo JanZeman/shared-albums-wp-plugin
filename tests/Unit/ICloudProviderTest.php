@@ -517,7 +517,7 @@ class ICloudProviderTest extends TestCase {
 			array(
 				'recordName' => 'A1',
 				'recordType' => 'CPLAsset',
-				'fields'     => array( 'masterRef' => array( 'value' => array( 'recordName' => 'M1' ) ) ),
+				'fields'     => array( 'masterRef' => array( 'value' => array( 'recordName' => 'M1' ) ), 'duration' => array( 'value' => 31866 ) ),
 			),
 			array(
 				'recordName' => 'A2',
@@ -533,6 +533,8 @@ class ICloudProviderTest extends TestCase {
 		// The original goes along so browsers that can play AVI (Safari) get the video, as on iCloud web.
 		$this->assertStringStartsWith( 'https://cvws.icloud-content.com/B/orig/', $photos[0]['alt_video'] );
 		$this->assertSame( 'video/avi', $photos[0]['alt_video_type'] );
+		$this->assertSame( 31.9, $photos[0]['duration'] );
+		$this->assertArrayNotHasKey( 'duration', $photos[1] );
 		$this->assertArrayNotHasKey( 'alt_video', $photos[1] );
 		$this->assertArrayNotHasKey( 'unplayable_video', $photos[1] );
 	}
