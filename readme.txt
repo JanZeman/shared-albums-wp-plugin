@@ -142,6 +142,8 @@ Contact: support@janzeman.com
 * Added gallery-video-tile="thumbnail": video tiles show a plain thumbnail with the video length in the bottom-right corner, like iCloud Photos, and open like a photo (per lightbox-toggle), where the video starts playing. The default "player" keeps today's small players in the tiles.
 * Video lengths now show right away for both Google Photos and iCloud, read from the album data instead of probing every video.
 * iCloud albums now notice within minutes when items were deleted, added or replaced in iCloud (for example a video converted to MP4), and load the album again instead of showing broken thumbnails until the album cache expires.
+* A video playing in a gallery tile now carries on in the lightbox or fullscreen view from the same moment, instead of stopping and starting over.
+* The pause bars in the loading play button are now centered.
 
 = 3.0.7 =
 * iCloud videos in older formats such as AVI, which iCloud keeps without an MP4 version, now play in browsers that support them (Safari, for example), like on iCloud web. Other browsers show them as photos.

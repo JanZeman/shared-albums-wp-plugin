@@ -10035,6 +10035,12 @@
             }
 
             var safeIndex = typeof index === 'number' && index >= 0 ? index : 0;
+            // A video already playing in its gallery tile carries on in the viewer from the
+            // same moment. Read it now: opening the viewer stops every other video.
+            var tileVideo = $container.find('video.jzsa-video-player[data-jzsa-media-index="' + safeIndex + '"]').filter(function() {
+                return !$slideshow[0].contains(this);
+            })[0];
+            var continueFrom = tileVideo && !tileVideo.paused && !tileVideo.ended ? tileVideo.currentTime : null;
             var swiper = swipers[slideshowId];
             if (swiper) {
                 if (swiper.params.loop && typeof swiper.slideToLoop === 'function') {
@@ -10056,7 +10062,8 @@
 
             // A thumbnail video tile has no player of its own: the video starts in the viewer.
             var openedPhoto = getContainerPhotos($container)[safeIndex];
-            if ($container.attr('data-gallery-video-tile') === 'thumbnail' && openedPhoto && openedPhoto.type === 'video') {
+            var startsFromThumbnail = $container.attr('data-gallery-video-tile') === 'thumbnail' && openedPhoto && openedPhoto.type === 'video';
+            if (startsFromThumbnail || continueFrom !== null) {
                 // Safari lets a video with sound start only from the user's click. Touching
                 // play() here, still inside the click, unlocks this video element for the
                 // start below.
@@ -10075,7 +10082,7 @@
                 // Opening resets the slides (each slide change pauses every video),
                 // so the real start comes a moment later.
                 setTimeout(function() {
-                    startActiveSlideVideo($slideshow, 0);
+                    startActiveSlideVideo($slideshow, 0, continueFrom);
                 }, 200);
             }
         }
@@ -10083,10 +10090,13 @@
         // Press the active slide's play button as a user would: one native click, so the
         // plugin's and Plyr's handlers each run once (a jQuery trigger would also replay
         // the native click, which the plugin reads as "pause").
-        function startActiveSlideVideo($slideshowEl, attempt) {
+        function startActiveSlideVideo($slideshowEl, attempt, startAt) {
             var $play = $slideshowEl.find('.swiper-slide-active .plyr__control--overlaid').first();
             var video = $slideshowEl.find('.swiper-slide-active video')[0];
             if ($play.length && video) {
+                if (startAt > 0) {
+                    seekVideoWhenReady(video, startAt);
+                }
                 if (video.paused) {
                     $play[0].click();
                 }
@@ -10094,9 +10104,19 @@
             }
             if (attempt < 8) {
                 setTimeout(function() {
-                    startActiveSlideVideo($slideshowEl, attempt + 1);
+                    startActiveSlideVideo($slideshowEl, attempt + 1, startAt);
                 }, 100);
             }
+        }
+
+        function seekVideoWhenReady(video, time) {
+            if (video.readyState >= 1) {
+                try { video.currentTime = time; } catch (e) { /* Starts from the beginning instead. */ }
+                return;
+            }
+            $(video).one('loadedmetadata', function() {
+                try { video.currentTime = time; } catch (e) { /* Starts from the beginning instead. */ }
+            });
         }
 
         function getGalleryPhotoIndexFromElement(targetEl) {
