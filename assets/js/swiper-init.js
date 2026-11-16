@@ -10057,19 +10057,24 @@
             // A thumbnail video tile has no player of its own: the video starts in the viewer.
             var openedPhoto = getContainerPhotos($container)[safeIndex];
             if ($container.attr('data-gallery-video-tile') === 'thumbnail' && openedPhoto && openedPhoto.type === 'video') {
-                startActiveSlideVideo($slideshow, 0);
+                // Opening resets the slides (each slide change pauses every video), so
+                // start a moment later, still within the click's user gesture.
+                setTimeout(function() {
+                    startActiveSlideVideo($slideshow, 0);
+                }, 200);
             }
         }
 
-        // Press the active slide's play button once its player exists (right away
-        // when possible, so the click still counts as the user's gesture for autoplay).
+        // Press the active slide's play button as a user would: one native click, so the
+        // plugin's and Plyr's handlers each run once (a jQuery trigger would also replay
+        // the native click, which the plugin reads as "pause").
         function startActiveSlideVideo($slideshowEl, attempt) {
             var $play = $slideshowEl.find('.swiper-slide-active .plyr__control--overlaid').first();
             if ($play.length) {
-                $play.trigger('click');
+                $play[0].click();
                 return;
             }
-            if (attempt < 10) {
+            if (attempt < 8) {
                 setTimeout(function() {
                     startActiveSlideVideo($slideshowEl, attempt + 1);
                 }, 100);
