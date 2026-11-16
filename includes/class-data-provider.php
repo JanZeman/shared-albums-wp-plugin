@@ -284,10 +284,15 @@ class JZSA_Data_Provider {
 					|| false !== strpos( $context, '"76647426"' ) );
 
 				if ( $is_video ) {
-					$media[] = array(
+					$video_item = array(
 						'url'  => $base,
 						'type' => 'video',
 					);
+					// The first value of the item's video metadata is its length in milliseconds.
+					if ( preg_match( '/"76647426":\[(\d+)/', $context, $duration_match ) && (int) $duration_match[1] > 0 ) {
+						$video_item['duration'] = round( (int) $duration_match[1] / 1000, 1 );
+					}
+					$media[] = $video_item;
 				} else {
 					$media[] = $base;
 				}

@@ -289,6 +289,20 @@ class DataProviderParseTest extends TestCase {
 		$this->assertSame( 11, count( $videos ) );
 	}
 
+	public function test_fetch_video_album_fixture_reads_each_video_length(): void {
+		$GLOBALS['jzsa_test_http_responses']['*'] = array( 'body' => self::$album_video_html );
+		$result = $this->provider->fetch_album(
+			'https://photos.google.com/share/AF1QipM-v19vtjd5NEiD6w40U7XqZoqwMUX4FyPr6p9U-9Ixjw2jy7oYFs7m7vgvvpm3PA?key=ZjhXZDNkc1ZrNmFvZ2tIOW16QXlGal94Y2g2cGJB'
+		);
+		// Google sends the length in milliseconds as the first value of the item's video metadata.
+		$this->assertSame( 12.3, $result['data']['photos'][0]['duration'] );
+		foreach ( $result['data']['photos'] as $item ) {
+			if ( is_array( $item ) && ( $item['type'] ?? '' ) === 'video' ) {
+				$this->assertGreaterThan( 0, $item['duration'] ?? 0 );
+			}
+		}
+	}
+
 	public function test_fetch_video_album_fixture_first_item_is_video(): void {
 		$GLOBALS['jzsa_test_http_responses']['*'] = array( 'body' => self::$album_video_html );
 		$result = $this->provider->fetch_album(

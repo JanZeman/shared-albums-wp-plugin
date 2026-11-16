@@ -1387,6 +1387,11 @@
      */
     function buildVideoHtml(opts) {
         var src = opts.src || '';
+        // A length sent with the album (iCloud, Google) shows at once, without probing the video.
+        var knownSeconds = parseFloat(opts.duration);
+        if (src && knownSeconds > 0 && !durationCache[src]) {
+            durationCache[src] = formatDurationText(knownSeconds);
+        }
         var poster = opts.poster || '';
         var extraClass = opts.extraClass ? ' ' + opts.extraClass : '';
         var styleAttr = opts.style ? ' style="' + opts.style + '"' : '';
@@ -3689,7 +3694,7 @@
             if (isVideo) {
                 var posterUrl = photo.preview || photo.full || '';
                 html += '<div class="swiper-slide jzsa-slide-video" data-media-type="video" data-carousel-photo-index="' + globalIndex + '" data-jzsa-global-index="' + globalIndex + '">' +
-                    buildVideoHtml({ src: photo.video, poster: posterUrl, mediaIndex: globalIndex }) +
+                    buildVideoHtml({ src: photo.video, poster: posterUrl, mediaIndex: globalIndex, duration: photo.duration }) +
                     tileInfoHtml +
                     tileOverlayButtons +
                     '</div>';
@@ -8003,7 +8008,7 @@
 
             if (isVideo && !videoAsThumb) {
                 var videoSrc = photo.video || src;
-                mediaHtml = buildVideoHtml({ src: videoSrc, poster: src, mediaIndex: globalIndex });
+                mediaHtml = buildVideoHtml({ src: videoSrc, poster: src, mediaIndex: globalIndex, duration: photo.duration });
             } else {
                 mediaHtml =
                     '<img class="jzsa-gallery-thumb' + tileFillClass + '"' +
@@ -8139,7 +8144,7 @@
 
                 if (isVideo && !videoAsThumb) {
                     var videoSrc = item.photo.video || src;
-                    mediaHtml = buildVideoHtml({ src: videoSrc, poster: src, mediaIndex: item.index });
+                    mediaHtml = buildVideoHtml({ src: videoSrc, poster: src, mediaIndex: item.index, duration: item.photo.duration });
                 } else {
                     mediaHtml =
                         '<img class="jzsa-gallery-thumb jzsa-justified-thumb"' +
