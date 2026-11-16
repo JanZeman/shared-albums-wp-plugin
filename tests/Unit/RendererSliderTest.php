@@ -29,6 +29,11 @@ class RendererSliderTest extends TestCase {
     // HTML structure
     // -------------------------------------------------------------------------
 
+    public function test_viewer_video_autoplay_attribute_only_when_switched_on(): void {
+        $this->assertStringNotContainsString( 'data-viewer-video-autoplay', $this->render( [] ) );
+        $this->assertStringContainsString( 'data-viewer-video-autoplay="true"', $this->render( [ 'viewer-video-autoplay' => true ] ) );
+    }
+
     public function test_slider_has_jzsa_album_swiper_classes(): void {
         $html = $this->render( [] );
         $this->assertStringContainsString( 'class="jzsa-album swiper jzsa-loader-pending"', $html );

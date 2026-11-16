@@ -412,6 +412,100 @@
 
     // Stop and reset all managed videos on the page. Used when switching
     // between inline and fullscreen so no hidden/orphan playback continues.
+    // Press the active slide's play button as a user would: one native click, so the
+    // plugin's and Plyr's handlers each run once (a jQuery trigger would also replay
+    // the native click, which the plugin reads as "pause").
+    function startActiveSlideVideo($slideshowEl, attempt, startAt) {
+        var $play = $slideshowEl.find('.swiper-slide-active .plyr__control--overlaid').first();
+        var video = $slideshowEl.find('.swiper-slide-active video')[0];
+        if ($play.length && video) {
+            if (startAt > 0) {
+                seekVideoWhenReady(video, startAt);
+            }
+            if (video.paused) {
+                $play[0].click();
+            }
+            return;
+        }
+        if (attempt < 8) {
+            setTimeout(function() {
+                startActiveSlideVideo($slideshowEl, attempt + 1, startAt);
+            }, 100);
+        }
+    }
+
+    function seekVideoWhenReady(video, time) {
+        if (video.readyState >= 1) {
+            try { video.currentTime = time; } catch (e) { /* Starts from the beginning instead. */ }
+            return;
+        }
+        $(video).one('loadedmetadata', function() {
+            try { video.currentTime = time; } catch (e) { /* Starts from the beginning instead. */ }
+        });
+    }
+
+    // Slider and carousel albums open the viewer on the album itself, and every switch
+    // between inline, lightbox and fullscreen stops all videos. Note what the video was
+    // doing before such a switch, then start it again once the switch has settled: a
+    // playing video carries on from the same moment, and with viewer-video-autoplay a
+    // video starts when the viewer opens. (Gallery albums have a separate viewer and
+    // handle this in openGalleryPlayerAtIndex and notifyGalleryOnFullscreenExit.)
+    function noteAlbumViewerSwitch(element, opening) {
+        if (!element || $(element).hasClass('jzsa-gallery-slideshow') || $(element).hasClass('jzsa-gallery-album')) {
+            return;
+        }
+        var video = $(element).find('.swiper-slide-active video.jzsa-video-player')[0];
+        var playingAt = video && !video.paused && !video.ended ? video.currentTime : null;
+        var pending = $(element).data('jzsaViewerSwitch');
+        var fresh = pending && Date.now() - pending.at < 2000;
+        if (playingAt === null && fresh) {
+            // A second notice for the same switch (fullscreen exit runs through two
+            // paths); the video is already stopped by now, so keep the first notice.
+            setTimeout(function() { resumeAlbumVideoAfterSwitch(element); }, 350);
+            return;
+        }
+        var autoplay = opening && element.getAttribute('data-viewer-video-autoplay') === 'true' && !!video;
+        if (playingAt === null && !autoplay) {
+            $(element).removeData('jzsaViewerSwitch');
+            return;
+        }
+        if (autoplay && playingAt === null) {
+            unlockVideoForLaterStart(video);
+        }
+        $(element).data('jzsaViewerSwitch', { time: playingAt, at: Date.now() });
+        setTimeout(function() { resumeAlbumVideoAfterSwitch(element); }, 350);
+    }
+
+    // Safari (and Chrome once fullscreen has used up the click) lets a video with sound
+    // start only from the user's click. Touching play() while the click is still
+    // running unlocks this video element for a start a moment later.
+    function unlockVideoForLaterStart(video) {
+        if (!video) {
+            return;
+        }
+        try {
+            var unlock = video.play();
+            if (unlock && typeof unlock.catch === 'function') {
+                unlock.catch(function() {});
+            }
+            video.pause();
+        } catch (e) {
+            // The real start reports its own problems.
+        }
+    }
+
+    function resumeAlbumVideoAfterSwitch(element) {
+        var pending = $(element).data('jzsaViewerSwitch');
+        if (!pending || Date.now() - pending.at > 2000) {
+            return;
+        }
+        var video = $(element).find('.swiper-slide-active video.jzsa-video-player')[0];
+        if (video && !video.paused) {
+            return;
+        }
+        startActiveSlideVideo($(element), 0, pending.time);
+    }
+
     // A gallery viewer (lightbox or fullscreen) is about to stop its videos. Note the one
     // that is playing, so its gallery tile can carry on from the same moment once the
     // viewer has closed (see notifyGalleryOnFullscreenExit).
@@ -464,6 +558,7 @@
     function toggleFullscreen(element, showHints) {
         var showHintsFn = showHints;
         rememberPlayingViewerVideo(element);
+        noteAlbumViewerSwitch(element, !isFullscreen(element) || isLightboxPresentationActive(element));
         stopAllManagedVideos();
         // When already in the lightbox, isFullscreen() treats lightbox-active as
         // fullscreen, which would wrongly prevent entering native fullscreen from
@@ -651,6 +746,7 @@
         if (_jzsaLightboxActiveEl && _jzsaLightboxActiveEl !== element) {
             closeLightbox(_jzsaLightboxActiveEl);
         }
+        noteAlbumViewerSwitch(element, true);
         stopAllManagedVideos();
 
         var $el = $(element);
@@ -855,6 +951,7 @@
             return;
         }
         rememberPlayingViewerVideo(element);
+        noteAlbumViewerSwitch(element, false);
         stopAllManagedVideos();
 
         var $el = $(element);
@@ -2692,7 +2789,7 @@
         $wrapper.append('<span class="jzsa-video-duration">' + durationText + '</span>');
     }
 
-    // Duration label of a gallery video tile shown as a thumbnail (gallery-video-tile="thumbnail").
+    // Duration label of a gallery video thumbnail that does not play inline (gallery-video-inline="false").
     // iCloud sends the length; otherwise it is filled in by the duration prefetch.
     function buildVideoTileDurationHtml(photo) {
         var seconds = photo && parseFloat(photo.duration);
@@ -4322,6 +4419,7 @@
             // Exit via Esc/browser chrome does not go through toggleFullscreen().
             // Ensure video playback is stopped consistently on fullscreen exit.
             rememberPlayingViewerVideo(containerElement);
+            noteAlbumViewerSwitch(containerElement, false);
             stopAllManagedVideos();
 
             // In carousel mode, restore the original multi-slide layout
@@ -8017,7 +8115,7 @@
         var showThumbLink = $container.attr('data-show-link-button') === 'true' && notLocked;
         var showThumbDownload = $container.attr('data-show-download-button') === 'true' && notLocked;
         var thumbAlbumUrl = $container.attr('data-album-url') || '';
-        var videoTilesAreThumbnails = $container.attr('data-gallery-video-tile') === 'thumbnail';
+        var videoTilesAreThumbnails = $container.attr('data-gallery-video-inline') === 'false';
 
         var html = '';
         pageItems.forEach(function(item) {
@@ -8150,7 +8248,7 @@
         var showThumbLink = $container.attr('data-show-link-button') === 'true' && notLocked;
         var showThumbDownload = $container.attr('data-show-download-button') === 'true' && notLocked;
         var thumbAlbumUrl = $container.attr('data-album-url') || '';
-        var videoTilesAreThumbnails = $container.attr('data-gallery-video-tile') === 'thumbnail';
+        var videoTilesAreThumbnails = $container.attr('data-gallery-video-inline') === 'false';
         var html = '';
         rows.forEach(function(row) {
             var totalRatio    = row.reduce(function(sum, item) { return sum + item.ratio; }, 0);
@@ -10107,61 +10205,17 @@
 
             // A thumbnail video tile has no player of its own: the video starts in the viewer.
             var openedPhoto = getContainerPhotos($container)[safeIndex];
-            var startsFromThumbnail = $container.attr('data-gallery-video-tile') === 'thumbnail' && openedPhoto && openedPhoto.type === 'video';
-            if (startsFromThumbnail || continueFrom !== null) {
-                // Safari lets a video with sound start only from the user's click. Touching
-                // play() here, still inside the click, unlocks this video element for the
-                // start below.
-                var activeVideo = $slideshow.find('.swiper-slide-active video')[0];
-                if (activeVideo) {
-                    try {
-                        var unlock = activeVideo.play();
-                        if (unlock && typeof unlock.catch === 'function') {
-                            unlock.catch(function() {});
-                        }
-                        activeVideo.pause();
-                    } catch (e) {
-                        // The real start below reports its own problems.
-                    }
-                }
+            var opensVideo = !!openedPhoto && openedPhoto.type === 'video';
+            var startsOnOpen = opensVideo && $container.attr('data-viewer-video-autoplay') === 'true';
+            if (startsOnOpen || continueFrom !== null) {
+                // Still inside the click: unlock the video for the start below.
+                unlockVideoForLaterStart($slideshow.find('.swiper-slide-active video')[0]);
                 // Opening resets the slides (each slide change pauses every video),
                 // so the real start comes a moment later.
                 setTimeout(function() {
                     startActiveSlideVideo($slideshow, 0, continueFrom);
                 }, 200);
             }
-        }
-
-        // Press the active slide's play button as a user would: one native click, so the
-        // plugin's and Plyr's handlers each run once (a jQuery trigger would also replay
-        // the native click, which the plugin reads as "pause").
-        function startActiveSlideVideo($slideshowEl, attempt, startAt) {
-            var $play = $slideshowEl.find('.swiper-slide-active .plyr__control--overlaid').first();
-            var video = $slideshowEl.find('.swiper-slide-active video')[0];
-            if ($play.length && video) {
-                if (startAt > 0) {
-                    seekVideoWhenReady(video, startAt);
-                }
-                if (video.paused) {
-                    $play[0].click();
-                }
-                return;
-            }
-            if (attempt < 8) {
-                setTimeout(function() {
-                    startActiveSlideVideo($slideshowEl, attempt + 1, startAt);
-                }, 100);
-            }
-        }
-
-        function seekVideoWhenReady(video, time) {
-            if (video.readyState >= 1) {
-                try { video.currentTime = time; } catch (e) { /* Starts from the beginning instead. */ }
-                return;
-            }
-            $(video).one('loadedmetadata', function() {
-                try { video.currentTime = time; } catch (e) { /* Starts from the beginning instead. */ }
-            });
         }
 
         function getGalleryPhotoIndexFromElement(targetEl) {

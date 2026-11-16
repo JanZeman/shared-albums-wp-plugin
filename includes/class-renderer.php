@@ -43,8 +43,8 @@ class JZSA_Renderer {
 			$html .= $this->render_unknown_attribute_notice( $config['unknown-attributes'] );
 		}
 
-		if ( isset( $config['mode'] ) && 'gallery' === $config['mode'] && isset( $config['gallery-video-tile'] ) && 'thumbnail' === $config['gallery-video-tile'] && 'player' === $this->effective_gallery_video_tile( $config ) && is_user_logged_in() && current_user_can( jzsa_get_admin_capability() ) ) {
-			$html .= $this->render_video_tile_fallback_notice();
+		if ( isset( $config['mode'] ) && 'gallery' === $config['mode'] && isset( $config['gallery-video-inline'] ) && false === $config['gallery-video-inline'] && $this->effective_gallery_video_inline( $config ) && is_user_logged_in() && current_user_can( jzsa_get_admin_capability() ) ) {
+			$html .= $this->render_video_inline_fallback_notice();
 		}
 
 		if ( ! empty( $config['unplayable-videos'] ) && is_user_logged_in() && current_user_can( jzsa_get_admin_capability() ) ) {
@@ -433,44 +433,56 @@ class JZSA_Renderer {
 	}
 
 	/**
-	 * Video tile style the gallery really uses.
+	 * Whether gallery videos really play inline.
 	 *
-	 * A thumbnail tile only opens the viewer, so without lightbox and fullscreen
-	 * the video could not be played at all; the tile stays a player then.
+	 * With gallery-video-inline="false" a video thumbnail only opens the viewer, so
+	 * without lightbox and fullscreen the video could not be played at all; it then
+	 * stays inline.
 	 *
 	 * @param array $config Configuration.
-	 * @return string 'player' or 'thumbnail'
+	 * @return bool
 	 */
-	private function effective_gallery_video_tile( $config ) {
-		if ( ! isset( $config['gallery-video-tile'] ) || 'thumbnail' !== $config['gallery-video-tile'] ) {
-			return 'player';
+	private function effective_gallery_video_inline( $config ) {
+		if ( ! isset( $config['gallery-video-inline'] ) || false !== $config['gallery-video-inline'] ) {
+			return true;
 		}
 		$lightbox   = isset( $config['lightbox-toggle'] ) ? $config['lightbox-toggle'] : 'disabled';
 		$fullscreen = isset( $config['fullscreen-toggle'] ) ? $config['fullscreen-toggle'] : 'disabled';
 		if ( 'disabled' === $lightbox && 'disabled' === $fullscreen ) {
-			return 'player';
+			return true;
 		}
 		if ( ! empty( $config['interaction-lock'] ) ) {
-			return 'player';
+			return true;
 		}
 
-		return 'thumbnail';
+		return false;
 	}
 
 	/**
-	 * Render the notice that gallery-video-tile="thumbnail" was ignored (admins only).
+	 * Data attribute for viewer-video-autoplay, only when switched on so existing
+	 * albums keep their exact markup.
+	 *
+	 * @param array $config Configuration.
+	 * @return array
+	 */
+	private function build_viewer_video_autoplay_attribute( $config ) {
+		return empty( $config['viewer-video-autoplay'] ) ? array() : array( 'data-viewer-video-autoplay="true"' );
+	}
+
+	/**
+	 * Render the notice that gallery-video-inline="false" was ignored (admins only).
 	 *
 	 * @return string HTML
 	 */
-	private function render_video_tile_fallback_notice() {
+	private function render_video_inline_fallback_notice() {
 		return sprintf(
 			'<div class="jzsa-warning" style="border: 2px solid #f0ad4e; border-radius: 4px; padding: 12px; margin: 8px; background: #fff9e6; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">' .
 			'<p style="margin: 0 0 6px 0; color: #856404; font-size: 13px; font-weight: 600;">%s %s</p>' .
 			'<p style="margin: 0; color: #856404; font-size: 12px; line-height: 1.5;">%s</p>' .
 			'</div>',
 			esc_html__( 'Warning (visible to administrators only):', 'janzeman-shared-albums-for-google-photos' ),
-			esc_html__( 'Video Tiles Stay Players', 'janzeman-shared-albums-for-google-photos' ),
-			esc_html__( 'gallery-video-tile="thumbnail" needs a way to open the video. Lightbox and fullscreen are both disabled here (or the gallery is locked), so the video tiles stay small players. Enable lightbox-toggle or fullscreen-toggle to use thumbnails.', 'janzeman-shared-albums-for-google-photos' )
+			esc_html__( 'Videos Still Play in the Gallery', 'janzeman-shared-albums-for-google-photos' ),
+			esc_html__( 'gallery-video-inline="false" needs a viewer to play the videos in. The viewer is disabled here (or the gallery is locked), so the videos still play right in the gallery. Set viewer="lightbox" or viewer="fullscreen" to use it.', 'janzeman-shared-albums-for-google-photos' )
 		);
 	}
 
@@ -1130,6 +1142,7 @@ class JZSA_Renderer {
 
 		// Lightbox (alternative to native fullscreen).
 		$attrs = array_merge( $attrs, $this->build_lightbox_data_attributes( $config ) );
+		$attrs = array_merge( $attrs, $this->build_viewer_video_autoplay_attribute( $config ) );
 
 		return implode( ' ', $attrs );
 	}
@@ -1181,10 +1194,11 @@ class JZSA_Renderer {
 		// Canonical gallery-* attributes.
 		$attrs[] = sprintf( 'data-gallery-layout="%s"', esc_attr( $gallery_layout ) );
 		$attrs[] = sprintf( 'data-gallery-sizing="%s"', esc_attr( $gallery_sizing ) );
-		if ( 'thumbnail' === $this->effective_gallery_video_tile( $config ) ) {
-			// Only when switched on, so existing galleries keep their exact markup.
-			$attrs[] = 'data-gallery-video-tile="thumbnail"';
+		if ( ! $this->effective_gallery_video_inline( $config ) ) {
+			// Only when switched off, so existing galleries keep their exact markup.
+			$attrs[] = 'data-gallery-video-inline="false"';
 		}
+		$attrs = array_merge( $attrs, $this->build_viewer_video_autoplay_attribute( $config ) );
 		$attrs[] = sprintf( 'data-gallery-columns="%d"', $gallery_columns );
 		$attrs[] = sprintf( 'data-gallery-columns-tablet="%d"', $gallery_columns_t );
 		$attrs[] = sprintf( 'data-gallery-columns-mobile="%d"', $gallery_columns_m );

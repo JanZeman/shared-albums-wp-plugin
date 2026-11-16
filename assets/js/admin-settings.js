@@ -536,7 +536,7 @@ var JZSA_KNOWN_PARAMS = [
 	'viewer-show-navigation', 'viewer-slideshow',
 	'viewer-slideshow-autoresume', 'viewer-slideshow-delay',
 	'viewer', 'viewer-source-height', 'viewer-source-width', 'viewer-toggle',
-	'viewer-video-controls-autohide', 'viewer-video-controls-color',
+	'viewer-video-autoplay', 'viewer-video-controls-autohide', 'viewer-video-controls-color',
 	'fullscreen-background-color', 'fullscreen-controls-color',
 	'fullscreen-corner-radius',
 	'fullscreen-display-max-height', 'fullscreen-display-max-width',
@@ -555,7 +555,7 @@ var JZSA_KNOWN_PARAMS = [
 	'gallery-buttons-on-mobile', 'gallery-caption', 'gallery-caption-gap', 'gallery-columns', 'gallery-columns-mobile',
 	'gallery-columns-tablet', 'gallery-gap', 'gallery-info-bottom',
 	'gallery-info-bottom-halo-effect', 'gallery-layout', 'gallery-row-height',
-	'gallery-rows', 'gallery-scrollable', 'gallery-sizing', 'gallery-video-tile', 'height', 'image-fit',
+	'gallery-rows', 'gallery-scrollable', 'gallery-sizing', 'gallery-video-inline', 'height', 'image-fit',
 	'info-bottom', 'info-bottom-halo-effect', 'info-bottom-text-align',
 	'info-font-color', 'info-font-family', 'info-font-size', 'info-halo-effect',
 	'info-text-align', 'info-top', 'info-top-halo-effect', 'info-top-secondary',
@@ -676,7 +676,7 @@ var JZSA_VALUE_RULES = ( function () {
 		'interaction-lock', 'mosaic', 'fullscreen-mosaic', 'gallery-scrollable',
 		'viewer-mosaic', 'viewer-show-navigation', 'viewer-show-link-button',
 		'viewer-show-download-button', 'viewer-video-controls-autohide',
-		'lightbox-mosaic',
+		'lightbox-mosaic', 'gallery-video-inline', 'viewer-video-autoplay',
 		'show-counter', 'show-title', 'fullscreen-show-counter', 'fullscreen-show-title'
 	], { type: 'bool' } );
 
@@ -686,7 +686,6 @@ var JZSA_VALUE_RULES = ( function () {
 		{ type: 'enum', values: [ 'cover', 'contain' ] } );
 	add( [ 'gallery-layout' ], { type: 'enum', values: [ 'grid', 'justified' ] } );
 	add( [ 'gallery-sizing' ], { type: 'enum', values: [ 'ratio', 'fill' ] } );
-	add( [ 'gallery-video-tile' ], { type: 'enum', values: [ 'player', 'thumbnail' ] } );
 	add( [ 'gallery-buttons-on-mobile' ],
 		{ type: 'enum', values: [ 'on-interaction', 'always' ] } );
 	add( [

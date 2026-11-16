@@ -1080,7 +1080,8 @@ class JZSA_Shared_Albums {
 			// Gallery mode (thumbnail layout)
 			'gallery-layout'         => $this->parse_gallery_layout( $atts ),
 			'gallery-sizing'         => $this->parse_gallery_sizing( $atts ),
-			'gallery-video-tile'     => $this->parse_gallery_video_tile( $atts ),
+			'gallery-video-inline'   => $this->parse_bool( $atts, 'gallery-video-inline', true ),
+			'viewer-video-autoplay'  => $this->parse_bool( $atts, 'viewer-video-autoplay', false ),
 			'gallery-columns'        => $this->parse_gallery_int( $atts, 'gallery-columns', 3 ),
 			'gallery-columns-tablet' => $this->parse_gallery_int( $atts, 'gallery-columns-tablet', 2 ),
 			'gallery-columns-mobile' => $this->parse_gallery_int( $atts, 'gallery-columns-mobile', 1 ),
@@ -1912,21 +1913,6 @@ class JZSA_Shared_Albums {
 		}
 
 		return 'grid';
-	}
-
-	/**
-	 * Parse gallery-video-tile attribute.
-	 *
-	 * "player" (default) makes each video tile a small player; "thumbnail" makes it
-	 * a plain thumbnail with the video length, opened and played like a photo.
-	 *
-	 * @param array $atts Attributes.
-	 * @return string 'player' or 'thumbnail'
-	 */
-	private function parse_gallery_video_tile( $atts ) {
-		$value = isset( $atts['gallery-video-tile'] ) ? strtolower( trim( (string) $atts['gallery-video-tile'] ) ) : '';
-
-		return 'thumbnail' === $value ? 'thumbnail' : 'player';
 	}
 
 	/**

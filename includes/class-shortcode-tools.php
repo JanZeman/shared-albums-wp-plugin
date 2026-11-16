@@ -1031,7 +1031,7 @@ class JZSA_Shortcode_Tools {
 			'gallery-gap',
 			'gallery-caption',
 			'gallery-caption-gap',
-			'gallery-video-tile',
+			'gallery-video-inline',
 			'gallery-buttons-on-mobile',
 
 			// Inline mosaic.
@@ -1098,6 +1098,7 @@ class JZSA_Shortcode_Tools {
 			'viewer-controls-color',
 			'viewer-video-controls-color',
 			'viewer-video-controls-autohide',
+			'viewer-video-autoplay',
 			'viewer-show-navigation',
 			'viewer-show-link-button',
 			'viewer-show-download-button',

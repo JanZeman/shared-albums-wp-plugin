@@ -149,10 +149,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 								<td>6</td>
 							</tr>
 							<tr>
-								<td><code>gallery-video-tile</code></td>
-								<td><?php esc_html_e( 'How video tiles look and behave. "player" makes each video tile a small player with a large play button. "thumbnail" shows a plain thumbnail with the video length in the bottom-right corner, like iCloud Photos; the tile then opens like a photo (per lightbox-toggle and fullscreen-toggle) and the video starts playing there. Needs the lightbox or fullscreen; otherwise the tiles stay players.', 'janzeman-shared-albums-for-google-photos' ); ?></td>
-								<td><code>player</code>, <code>thumbnail</code></td>
-								<td>player</td>
+								<td><code>gallery-video-inline</code></td>
+								<td><?php esc_html_e( 'Whether videos play right in the gallery. "true" makes each video thumbnail a small player with a large play button. "false" shows a plain thumbnail with the video length in the bottom-right corner, like iCloud Photos; it opens in the viewer like a photo (see viewer and viewer-trigger) and the video plays there. Needs a viewer; with viewer="disabled" videos still play in the gallery.', 'janzeman-shared-albums-for-google-photos' ); ?></td>
+								<td><code>true</code>, <code>false</code></td>
+								<td>true</td>
 							</tr>
 						</tbody>
 					</table>
@@ -350,6 +350,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<tr><td><code>viewer-controls-color</code></td><td><?php esc_html_e( 'Navigation and action control color for either viewer mode.', 'janzeman-shared-albums-for-google-photos' ); ?></td><td><code>#RRGGBB</code>, <code>rgb()</code>, <code>rgba()</code>, <code>hsl()</code>, <code>hsla()</code>, <code>transparent</code></td><td><em><?php esc_html_e( 'inherits controls-color', 'janzeman-shared-albums-for-google-photos' ); ?></em></td></tr>
 							<tr><td><code>viewer-video-controls-color</code></td><td><?php esc_html_e( 'Video control color for either viewer mode.', 'janzeman-shared-albums-for-google-photos' ); ?></td><td><code>#RRGGBB</code>, <code>rgb()</code>, <code>rgba()</code>, <code>hsl()</code>, <code>hsla()</code>, <code>transparent</code></td><td><em><?php esc_html_e( 'inherits video-controls-color', 'janzeman-shared-albums-for-google-photos' ); ?></em></td></tr>
 							<tr><td><code>viewer-video-controls-autohide</code></td><td><?php esc_html_e( 'Whether video controls auto-hide in either viewer mode.', 'janzeman-shared-albums-for-google-photos' ); ?></td><td><code>true</code>, <code>false</code></td><td><em><?php esc_html_e( 'inherits video-controls-autohide', 'janzeman-shared-albums-for-google-photos' ); ?></em></td></tr>
+							<tr><td><code>viewer-video-autoplay</code></td><td><?php esc_html_e( 'Whether a video starts playing as soon as it opens in either viewer mode (from a gallery thumbnail, or a slider or carousel video slide). A video already playing on the page always carries on in the viewer, and back.', 'janzeman-shared-albums-for-google-photos' ); ?></td><td><code>true</code>, <code>false</code></td><td>false</td></tr>
 							<tr><td><code>viewer-show-navigation</code></td><td><?php esc_html_e( 'Whether previous and next controls are shown in either viewer mode.', 'janzeman-shared-albums-for-google-photos' ); ?></td><td><code>true</code>, <code>false</code></td><td><em><?php esc_html_e( 'inherits show-navigation', 'janzeman-shared-albums-for-google-photos' ); ?></em></td></tr>
 							<tr><td><code>viewer-show-link-button</code></td><td><?php esc_html_e( 'Whether the button that opens the album in Google Photos or iCloud Photos is shown in either viewer mode.', 'janzeman-shared-albums-for-google-photos' ); ?></td><td><code>true</code>, <code>false</code></td><td><em><?php esc_html_e( 'inherits show-link-button', 'janzeman-shared-albums-for-google-photos' ); ?></em></td></tr>
 							<tr><td><code>viewer-show-download-button</code></td><td><?php esc_html_e( 'Whether the download button is shown in either viewer mode.', 'janzeman-shared-albums-for-google-photos' ); ?></td><td><code>true</code>, <code>false</code></td><td><em><?php esc_html_e( 'inherits show-download-button', 'janzeman-shared-albums-for-google-photos' ); ?></em></td></tr>

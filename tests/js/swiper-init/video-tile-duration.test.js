@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { loadHelpers } from '../helpers/loadFromSwiperInit.js';
 
-// gallery-video-tile="thumbnail": the tile shows the video length bottom right.
+// gallery-video-inline="false": the tile shows the video length bottom right.
 const { buildVideoTileDurationHtml } = loadHelpers(['formatDurationText', 'jzsaEscapeAttr', 'buildVideoTileDurationHtml']);
 
 describe('video tile duration label', () => {

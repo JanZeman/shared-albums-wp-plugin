@@ -3179,7 +3179,7 @@ html.jzsa-lightbox-open body {
     position: relative;
 }
 
-/* gallery-video-tile="thumbnail": a video tile is a plain thumbnail with its
+/* gallery-video-inline="false": a video tile is a plain thumbnail with its
    length in the bottom-right corner; it opens like a photo. */
 .jzsa-gallery-video-duration {
     position: absolute;
