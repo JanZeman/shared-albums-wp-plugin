@@ -10057,8 +10057,23 @@
             // A thumbnail video tile has no player of its own: the video starts in the viewer.
             var openedPhoto = getContainerPhotos($container)[safeIndex];
             if ($container.attr('data-gallery-video-tile') === 'thumbnail' && openedPhoto && openedPhoto.type === 'video') {
-                // Opening resets the slides (each slide change pauses every video), so
-                // start a moment later, still within the click's user gesture.
+                // Safari lets a video with sound start only from the user's click. Touching
+                // play() here, still inside the click, unlocks this video element for the
+                // start below.
+                var activeVideo = $slideshow.find('.swiper-slide-active video')[0];
+                if (activeVideo) {
+                    try {
+                        var unlock = activeVideo.play();
+                        if (unlock && typeof unlock.catch === 'function') {
+                            unlock.catch(function() {});
+                        }
+                        activeVideo.pause();
+                    } catch (e) {
+                        // The real start below reports its own problems.
+                    }
+                }
+                // Opening resets the slides (each slide change pauses every video),
+                // so the real start comes a moment later.
                 setTimeout(function() {
                     startActiveSlideVideo($slideshow, 0);
                 }, 200);
@@ -10070,8 +10085,11 @@
         // the native click, which the plugin reads as "pause").
         function startActiveSlideVideo($slideshowEl, attempt) {
             var $play = $slideshowEl.find('.swiper-slide-active .plyr__control--overlaid').first();
-            if ($play.length) {
-                $play[0].click();
+            var video = $slideshowEl.find('.swiper-slide-active video')[0];
+            if ($play.length && video) {
+                if (video.paused) {
+                    $play[0].click();
+                }
                 return;
             }
             if (attempt < 8) {
