@@ -3077,6 +3077,41 @@ html.jzsa-lightbox-open body {
     }
 }
 
+/* Keep the theme's own button design off the video buttons. Themes and page builders
+   (for example Elementor's global button style) restyle every <button> on the page,
+   which turned the round play button into a red rectangle. Plyr's own rules are too
+   weak to win, so restate them here, a notch stronger than such theme rules. */
+.jzsa-video-wrapper .plyr button.plyr__control {
+    background-color: transparent;
+    background-image: none;
+    border: 0;
+    border-radius: var(--plyr-control-radius, 4px);
+    box-shadow: none;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: normal;
+    line-height: inherit;
+    min-height: 0;
+    min-width: 0;
+    padding: calc(var(--plyr-control-spacing, 10px) * 0.7);
+    text-shadow: none;
+    text-transform: none;
+}
+
+.jzsa-video-wrapper .plyr button.plyr__control:hover,
+.jzsa-video-wrapper .plyr button.plyr__control:focus-visible,
+.jzsa-video-wrapper .plyr button.plyr__control[aria-expanded="true"] {
+    background-color: var(--plyr-video-control-background-hover, var(--plyr-color-main, #00b2ff));
+    color: var(--plyr-video-control-color-hover, #fff);
+}
+
+.jzsa-video-wrapper .plyr button.plyr__control--overlaid {
+    border-radius: 100%;
+    color: var(--plyr-video-control-color, #fff);
+    padding: calc(var(--plyr-control-spacing, 10px) * 1.5);
+}
+
 /* Plyr control bar accent + compact volume */
 .jzsa-video-wrapper .plyr {
     --plyr-color-main: var(--jzsa-video-controls-color, #00b2ff);

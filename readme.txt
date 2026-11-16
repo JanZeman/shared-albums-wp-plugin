@@ -145,6 +145,7 @@ Contact: support@janzeman.com
 * Added viewer-video-autoplay="true": a video starts playing as soon as it opens in the lightbox or fullscreen, in gallery, slider and carousel albums. Off by default.
 * A video playing on the page (gallery, slider or carousel) now carries on in the lightbox or fullscreen from the same moment, and back on the page after closing, instead of stopping and starting over.
 * The pause bars in the loading play button are now centered.
+* Video buttons keep their own look when the theme or page builder restyles every button on the site (for example Elementor's global button style), which made the round play button a rectangle.
 
 = 3.0.7 =
 * iCloud videos in older formats such as AVI, which iCloud keeps without an MP4 version, now play in browsers that support them (Safari, for example), like on iCloud web. Other browsers show them as photos.
