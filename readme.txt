@@ -142,7 +142,7 @@ Contact: support@janzeman.com
 * Added gallery-video-inline="false": gallery videos no longer play right in the gallery. Their thumbnails show the video length in the bottom-right corner, like iCloud Photos, and open in the viewer like a photo to play there.
 * Video lengths now show right away for both Google Photos and iCloud, read from the album data instead of probing every video.
 * iCloud albums now notice within minutes when items were deleted, added or replaced in iCloud (for example a video converted to MP4), and load the album again instead of showing broken thumbnails until the album cache expires.
-* Added viewer-video-autoplay="true": a video starts playing as soon as it opens in the lightbox or fullscreen, in gallery, slider and carousel albums. Off by default.
+* Added viewer-video-autoplay="true": videos start playing by themselves in the lightbox or fullscreen, both the one it opens on and each one you browse to, in gallery, slider and carousel albums. Off by default.
 * A video playing on the page (gallery, slider or carousel) now carries on in the lightbox or fullscreen from the same moment, and back on the page after closing, instead of stopping and starting over.
 * The pause bars in the loading play button are now centered.
 * Gallery tiles now show a soft grey area in their final size while thumbnails load, and the images fade in, instead of an empty page or a spinner. iCloud galleries show their tiles right away too, like Google Photos ones.

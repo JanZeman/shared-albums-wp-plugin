@@ -2315,7 +2315,7 @@ class JZSA_Admin_Pages {
 
 						<div class="jzsa-sample-card">
 							<h3 data-jzsa-anchor="video-autoplay-in-slider-viewer"><?php echo 'Sample 56: ' . esc_html__( 'Video Autoplay in Slider Viewer', 'janzeman-shared-albums-for-google-photos' ); ?></h3>
-							<p><?php esc_html_e( 'With viewer-video-autoplay="true", a video starts playing as soon as it opens in the viewer. It works the same in slider, carousel and gallery albums. A video already playing on the page always carries on in the viewer from the same moment, and back after closing.', 'janzeman-shared-albums-for-google-photos' ); ?></p>
+							<p><?php esc_html_e( 'With viewer-video-autoplay="true", videos start playing by themselves in the viewer: the one it opens on, and each one you browse to. It works the same in slider, carousel and gallery albums. A video already playing on the page always carries on in the viewer from the same moment, and back after closing.', 'janzeman-shared-albums-for-google-photos' ); ?></p>
 						<?php
 							$sample_shortcode = '[jzsa-album link="' . $video_sample_link . '" mode="slider" viewer="lightbox" limit="8" corner-radius="16" viewer-video-autoplay="true"]';
 						?>

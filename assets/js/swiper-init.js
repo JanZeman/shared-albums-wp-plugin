@@ -5824,6 +5824,35 @@
             });
         });
 
+        // viewer-video-autoplay: a video reached by browsing in the viewer starts too.
+        swiper.on('slideChangeTransitionEnd', function() {
+            var element = $container[0];
+            if (!viewerVideoAutoplayIsOn(element) || !isFullscreen(element)) {
+                return;
+            }
+            var $activeSlide = $(swiper.slides[swiper.activeIndex]);
+            var video = $activeSlide.find('video.jzsa-video-player')[0];
+            if ($activeSlide.attr('data-media-type') === 'video' && video && video.paused) {
+                startActiveSlideVideo($container, 0, null);
+            }
+        });
+
+    }
+
+    // The gallery viewer is a separate element; the setting lives on the gallery.
+    function viewerVideoAutoplayIsOn(element) {
+        if (!element || !element.getAttribute) {
+            return false;
+        }
+        if (element.getAttribute('data-viewer-video-autoplay') === 'true') {
+            return true;
+        }
+        var id = element.id || '';
+        if (/-slideshow$/.test(id)) {
+            var gallery = document.getElementById(id.replace(/-slideshow$/, ''));
+            return !!gallery && gallery.getAttribute('data-viewer-video-autoplay') === 'true';
+        }
+        return false;
     }
 
     // Helper: Setup progressive image loading
