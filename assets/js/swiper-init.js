@@ -412,6 +412,22 @@
 
     // Stop and reset all managed videos on the page. Used when switching
     // between inline and fullscreen so no hidden/orphan playback continues.
+    // A gallery viewer (lightbox or fullscreen) is about to stop its videos. Note the one
+    // that is playing, so its gallery tile can carry on from the same moment once the
+    // viewer has closed (see notifyGalleryOnFullscreenExit).
+    function rememberPlayingViewerVideo(element) {
+        if (!element || !$(element).hasClass('jzsa-gallery-slideshow')) {
+            return;
+        }
+        var video = $(element).find('.swiper-slide-active video.jzsa-video-player')[0];
+        var index = video ? parseInt(video.getAttribute('data-jzsa-media-index') || '', 10) : NaN;
+        if (!video || video.paused || video.ended || isNaN(index)) {
+            $(element).removeData('jzsaPlayingVideo');
+            return;
+        }
+        $(element).data('jzsaPlayingVideo', { index: index, time: video.currentTime, at: Date.now() });
+    }
+
     function stopAllManagedVideos() {
         $('video.jzsa-video-player').each(function() {
             var videoEl = this;
@@ -447,6 +463,7 @@
     // separately via toggleLightbox() and the dedicated .swiper-button-lightbox.
     function toggleFullscreen(element, showHints) {
         var showHintsFn = showHints;
+        rememberPlayingViewerVideo(element);
         stopAllManagedVideos();
         // When already in the lightbox, isFullscreen() treats lightbox-active as
         // fullscreen, which would wrongly prevent entering native fullscreen from
@@ -837,6 +854,7 @@
         if (!element || !isLightboxActive(element)) {
             return;
         }
+        rememberPlayingViewerVideo(element);
         stopAllManagedVideos();
 
         var $el = $(element);
@@ -1227,6 +1245,12 @@
             var currentIndex = (typeof swiper.realIndex === 'number') ? swiper.realIndex : swiper.activeIndex;
             var galleryId = element.id.replace(/-slideshow$/, '');
             $('#' + galleryId).trigger('jzsa:focus-index', [currentIndex]);
+
+            var playing = $el.data('jzsaPlayingVideo');
+            $el.removeData('jzsaPlayingVideo');
+            if (playing && Date.now() - playing.at < 3000) {
+                $('#' + galleryId).trigger('jzsa:continue-video', [playing.index, playing.time]);
+            }
         }
     }
 
@@ -4297,6 +4321,7 @@
 
             // Exit via Esc/browser chrome does not go through toggleFullscreen().
             // Ensure video playback is stopped consistently on fullscreen exit.
+            rememberPlayingViewerVideo(containerElement);
             stopAllManagedVideos();
 
             // In carousel mode, restore the original multi-slide layout
@@ -9903,6 +9928,26 @@
         // was last viewing.  All layout/pagination state lives in this
         // closure, so the computation happens here rather than in the
         // fullscreen exit handler.
+        // A video that was playing in the viewer carries on in its tile (player tiles only).
+        $container.off('jzsa:continue-video').on('jzsa:continue-video', function(_e, mediaIndex, time) {
+            setTimeout(function() {
+                var tileVideo = $container.find('video.jzsa-video-player[data-jzsa-media-index="' + mediaIndex + '"]').filter(function() {
+                    return !($slideshow && $slideshow[0] && $slideshow[0].contains(this));
+                })[0];
+                if (!tileVideo || !tileVideo.paused) {
+                    return;
+                }
+                var $play = $(tileVideo).closest('.jzsa-video-wrapper').find('.plyr__control--overlaid').first();
+                if (!$play.length) {
+                    return;
+                }
+                if (time > 0) {
+                    seekVideoWhenReady(tileVideo, time);
+                }
+                $play[0].click();
+            }, 150);
+        });
+
         $container.on('jzsa:focus-index', function(_e, targetIndex) {
             if (typeof targetIndex !== 'number' || targetIndex < 0 || targetIndex >= allPhotos.length) {
                 return;
