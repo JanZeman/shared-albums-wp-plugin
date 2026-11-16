@@ -95,8 +95,10 @@
 		}
 		var album = '';
 		var renditions = {};
+		// Video thumbnails are plain images when videos do not play in the gallery.
+		var videoThumbsAreImages = $container.attr('data-gallery-video-inline') === 'false';
 		photos.forEach(function(photo) {
-			if (!photo || photo.type === 'video') {
+			if (!photo || (photo.type === 'video' && !videoThumbsAreImages)) {
 				return;
 			}
 			[photo.preview || photo.full, photo.thumb].forEach(function(url) {
@@ -161,6 +163,36 @@
 		}
 		loadDirectMediaUrls(request).always(finish);
 		window.setTimeout(finish, DIRECT_MEDIA_WAIT_MS);
+	}
+
+	// src attribute of a gallery thumbnail. While a gallery waits for its direct URLs it
+	// is already shown as grey tiles; their images get the URL once it is known (see
+	// releaseDeferredGalleryMedia), so no thumbnail goes the slow way through the site.
+	function galleryThumbSrcAttr($container, url) {
+		if ($container.data('jzsaDirectMediaDeferred')) {
+			return ' data-jzsa-src="' + url + '"';
+		}
+		return ' src="' + directMediaUrl(url) + '"';
+	}
+
+	function releaseDeferredGalleryMedia($gallery) {
+		$gallery.removeData('jzsaDirectMediaDeferred');
+		var $scope = $gallery.add(document.getElementById(($gallery.attr('id') || '') + '-slideshow'));
+		$scope.find('img[data-jzsa-src]').each(function() {
+			this.setAttribute('src', directMediaUrl(this.getAttribute('data-jzsa-src')));
+			this.removeAttribute('data-jzsa-src');
+		});
+		// Images built meanwhile with a stable URL (viewer slides, not loaded yet).
+		$scope.find('img[src]').each(function() {
+			if (this.complete) {
+				return;
+			}
+			var current = this.getAttribute('src');
+			var direct = directMediaUrl(current);
+			if (direct !== current) {
+				this.setAttribute('src', direct);
+			}
+		});
 	}
 
 	// A direct URL that fails (expired, clock skew) falls back to its stable URL.
@@ -8135,7 +8167,7 @@
             } else {
                 mediaHtml =
                     '<img class="jzsa-gallery-thumb' + tileFillClass + '"' +
-                    ' src="' + src + '"' +
+                    galleryThumbSrcAttr($container, baseSrc) +
                     (baseSrc !== photo.full ? ' data-full-src="' + photo.full + '"' : '') +
                     ' data-index="' + globalIndex + '"' +
                     ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (globalIndex + 1) + '"' +
@@ -8211,6 +8243,24 @@
         }
         initPlyrInContainer($container);
         scheduleDurationPrefetch($container);
+        showGalleryThumbsWhenLoaded($container);
+    }
+
+    // While a thumbnail loads, its tile shows a soft grey area instead of empty page;
+    // the image then fades in. Thumbnails already loaded (from the cache) skip this.
+    function showGalleryThumbsWhenLoaded($container) {
+        $container.find('img.jzsa-gallery-thumb').each(function() {
+            var img = this;
+            if (img.complete && img.naturalWidth > 0) {
+                return;
+            }
+            var $item = $(img).closest('.jzsa-gallery-item');
+            $item.addClass('jzsa-tile-pending');
+            $(img).on('load.jzsaTile', function() {
+                $(img).off('load.jzsaTile');
+                $item.removeClass('jzsa-tile-pending');
+            });
+        });
     }
 
     /**
@@ -8271,7 +8321,7 @@
                 } else {
                     mediaHtml =
                         '<img class="jzsa-gallery-thumb jzsa-justified-thumb"' +
-                        ' src="' + src + '"' +
+                        galleryThumbSrcAttr($container, src) +
                         (src !== item.photo.full ? ' data-full-src="' + item.photo.full + '"' : '') +
                         ' data-index="' + item.index + '"' +
                         ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (item.index + 1) + '"' +
@@ -10628,14 +10678,20 @@
 
         ensureGalleryId($gallery, fallbackIndex);
 
+        if (getDirectMediaRequest($gallery) && ($gallery.attr('data-mode') || 'gallery') === 'gallery') {
+            // A gallery shows its grey tiles right away, like a Google Photos album, and
+            // fills them in once the direct URLs are known.
+            $gallery.data('jzsaDirectMediaDeferred', true);
+            whenDirectMediaReady($gallery, function() {
+                releaseDeferredGalleryMedia($gallery);
+            });
+            initializeGalleryMode(element);
+            return;
+        }
+
         if (getDirectMediaRequest($gallery)) {
             $gallery.data('jzsaDirectMediaPending', true);
             // Same loader the album shows while it initializes, so the wait looks the same.
-            // A gallery is wrapped in its shell first: moving it later would restart the
-            // loader's delayed fade-in and make a visible spinner blink.
-            if (($gallery.attr('data-mode') || 'gallery') === 'gallery') {
-                ensureGalleryShell($gallery);
-            }
             activateLoaderState($gallery, 'Loading content...', 'This is taking longer than usual...');
             whenDirectMediaReady($gallery, function() {
                 $gallery.removeData('jzsaDirectMediaPending');

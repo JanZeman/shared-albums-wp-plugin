@@ -2055,6 +2055,13 @@ html.jzsa-lightbox-open body {
     background: transparent;
 }
 
+/* Once the grey tiles are on screen they show the loading themselves; a spinner in the
+   middle of the whole gallery would only float between tiles and captions. */
+.jzsa-gallery-album.jzsa-loader-pending:has(.jzsa-gallery-item) .jzsa-loader {
+    opacity: 0;
+    visibility: hidden;
+}
+
 /* Uniform gallery layout */
 .jzsa-gallery-album[data-gallery-layout="grid"] {
     display: grid;
@@ -2121,6 +2128,29 @@ html.jzsa-lightbox-open body {
 .jzsa-gallery-album[data-gallery-layout="justified"][data-image-fit="contain"] .jzsa-gallery-thumb {
     object-fit: contain;
 }
+/* Loading state: a soft grey area in the tile's final size, then the image fades in.
+   The class is set only while the image loads, so a loaded gallery looks as before. */
+.jzsa-gallery-item {
+    transition: background-color 0.2s ease;
+}
+
+.jzsa-gallery-item.jzsa-tile-pending {
+    background-color: rgba(128, 128, 128, 0.15);
+    border-radius: var(--jzsa-corner-radius, 0);
+}
+
+.jzsa-gallery-item .jzsa-gallery-thumb {
+    transition: opacity 0.2s ease;
+}
+
+.jzsa-gallery-item.jzsa-tile-pending .jzsa-gallery-thumb {
+    opacity: 0;
+}
+
+.jzsa-gallery-item.jzsa-tile-pending .jzsa-gallery-video-duration {
+    visibility: hidden;
+}
+
 /* Shared thumbnail base */
 .jzsa-gallery-thumb {
     -webkit-user-drag: none;
