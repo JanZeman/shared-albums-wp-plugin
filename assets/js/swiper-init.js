@@ -8285,9 +8285,21 @@
             }
             var $item = $(img).closest('.jzsa-gallery-item');
             $item.addClass('jzsa-tile-pending');
-            $(img).on('load.jzsaTile', function() {
-                $(img).off('load.jzsaTile');
+            function reveal() {
+                $(img).off('.jzsaTile');
                 $item.removeClass('jzsa-tile-pending');
+            }
+            $(img).on('load.jzsaTile', reveal);
+            // A failed direct URL is retried with its stable URL (see the document
+            // error listener). Only when the src stays the same is the image really
+            // broken; then show it as before rather than keep an empty grey tile.
+            $(img).on('error.jzsaTile', function() {
+                var failedSrc = img.getAttribute('src');
+                window.setTimeout(function() {
+                    if (img.getAttribute('src') === failedSrc) {
+                        reveal();
+                    }
+                }, 0);
             });
         });
     }
