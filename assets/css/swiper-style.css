@@ -2988,7 +2988,7 @@ html.jzsa-lightbox-open body {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(calc(-50% + 1px), -50%);
+    transform: translate(-50%, -50%);
     width: 3.2px;
     height: 12.8px;
     border-left: 3.2px solid #fff;
