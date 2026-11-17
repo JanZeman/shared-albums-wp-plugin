@@ -2430,13 +2430,18 @@ html.jzsa-lightbox-open body {
     cursor: inherit;
 }
 
-/* Pointer cursor on gallery items when click or double-click opens fullscreen.
-   Applies to both photo thumbnails and video cells.  Must appear after the
-   draggable cursor rules above (same specificity, source-order wins). */
+/* Pointer cursor on gallery items when click or double-click opens the
+   lightbox or fullscreen. Applies to both photo thumbnails and video cells.
+   Must appear after the draggable cursor rules above (same specificity,
+   source-order wins). */
 .jzsa-gallery-album[data-fullscreen-toggle="click"] .jzsa-gallery-thumb,
 .jzsa-gallery-album[data-fullscreen-toggle="double-click"] .jzsa-gallery-thumb,
 .jzsa-gallery-album[data-fullscreen-toggle="click"] .jzsa-gallery-item-video,
-.jzsa-gallery-album[data-fullscreen-toggle="double-click"] .jzsa-gallery-item-video {
+.jzsa-gallery-album[data-fullscreen-toggle="double-click"] .jzsa-gallery-item-video,
+.jzsa-gallery-album[data-lightbox-toggle="click"] .jzsa-gallery-thumb,
+.jzsa-gallery-album[data-lightbox-toggle="double-click"] .jzsa-gallery-thumb,
+.jzsa-gallery-album[data-lightbox-toggle="click"] .jzsa-gallery-item-video,
+.jzsa-gallery-album[data-lightbox-toggle="double-click"] .jzsa-gallery-item-video {
     cursor: pointer;
 }
 
