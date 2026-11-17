@@ -8082,20 +8082,20 @@
     /**
      * Aspect ratio of a photo for the justified layout.
      *
-     * Google URLs carry the size as "=w800-h600". Sources with fixed renditions
-     * (iCloud) have no size in the URL, so their own width and height are used.
+     * The photo's own width and height come first. The "=w800-h600" in a Google
+     * URL is only the bounding box requested from Google, not the photo's shape,
+     * so it is the fallback for items whose size is unknown.
      *
      * @param  {Object} photo Photo object.
      * @return {number} Aspect ratio (width / height).
      */
     function photoAspectRatio(photo) {
-        var url = photo.preview || photo.full || '';
         var w = parseInt(photo.width, 10);
         var h = parseInt(photo.height, 10);
-        if (!/=w\d+-h\d+/.test(url) && w > 0 && h > 0) {
+        if (w > 0 && h > 0) {
             return w / h;
         }
-        return parseAspectRatio(url);
+        return parseAspectRatio(photo.preview || photo.full || '');
     }
 
     /**
@@ -8117,8 +8117,12 @@
             var photoWidth = targetHeight * item.ratio;
             var gapBefore = currentRow.length > 0 ? gap : 0;
 
-            // Start a new row when adding this photo would exceed ~110% of container width
-            if (currentRow.length > 0 && currentRowWidth + gapBefore + photoWidth > containerWidth * 1.1) {
+            // Rows keep one height and are stretched or squeezed to the container
+            // width, which crops the photos a little. Close the row before this
+            // photo when the row without it is nearer to the container width.
+            var widthWith = currentRowWidth + gapBefore + photoWidth;
+            if (currentRow.length > 0 && widthWith > containerWidth &&
+                    widthWith - containerWidth > containerWidth - currentRowWidth) {
                 rows.push(currentRow);
                 currentRow = [];
                 currentRowWidth = 0;
