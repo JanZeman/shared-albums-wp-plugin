@@ -4,7 +4,7 @@ Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 3.0.8
+Stable tag: 3.0.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -371,6 +371,9 @@ Contact: support@janzeman.com
 * Responsive design with touch gestures
 
 == Upgrade Notice ==
+
+= 3.0.9 =
+Shows a notice with a link to the whole album when it has more items than the plugin can show, and justified galleries now follow each Google Photos photo's real shape.
 
 = 3.0.8 =
 Adds gallery-video-inline and viewer-video-autoplay for iCloud-style video thumbnails, and iCloud albums pick up deleted, added or replaced items within minutes.
