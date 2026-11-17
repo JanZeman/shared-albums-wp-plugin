@@ -520,7 +520,7 @@ function jzsaSetupLazyPreviews() {
  * documented shortcode parameter is added or removed.
  */
 var JZSA_KNOWN_PARAMS = [
-	'album-cache-refresh', 'album-heading', 'album-heading-gap', 'album-heading-indent', 'album-heading-position', 'album-heading-text-align', 'album-link', 'album-link-gap', 'album-link-indent', 'album-link-position', 'album-link-text-align', 'album-title-halo-effect', 'background-color',
+	'album-cache-refresh', 'album-heading', 'album-heading-gap', 'album-heading-indent', 'album-heading-position', 'album-heading-text-align', 'album-link', 'album-link-gap', 'album-link-indent', 'album-link-position', 'album-link-text-align', 'album-more-link', 'album-more-link-position', 'album-title-halo-effect', 'background-color',
 	'controls-color', 'corner-radius', 'download-size-warning',
 	'viewer-background-color', 'viewer-controls-color',
 	'viewer-corner-radius', 'viewer-image-fit', 'viewer-info-bottom',
@@ -713,6 +713,8 @@ var JZSA_VALUE_RULES = ( function () {
 	], { type: 'enum', values: [ 'left', 'center', 'right' ] } );
 	add( [ 'album-heading-position', 'album-link-position' ],
 		{ type: 'enum', values: [ 'top', 'bottom' ] } );
+	add( [ 'album-more-link-position' ],
+		{ type: 'enum', values: [ 'top', 'bottom', 'both' ] } );
 
 	add( [
 		'background-color', 'controls-color', 'video-controls-color', 'info-font-color',

@@ -976,4 +976,41 @@ class DataProviderParseTest extends TestCase {
 		$this->assertArrayHasKey( 'image', $urls );
 		$this->assertArrayNotHasKey( 'video', $urls );
 	}
+
+	// -------------------------------------------------------------------------
+	// Album total item count
+	// -------------------------------------------------------------------------
+
+	private static function ds1_html( array $data ): string {
+		return "<script>AF_initDataCallback({key: 'ds:1', hash: '2', data:" . json_encode( $data ) . ", sideChannel: {}});</script>";
+	}
+
+	public function test_total_count_reads_the_album_meta(): void {
+		$meta       = array_fill( 0, 22, null );
+		$meta[21]   = 368;
+		$items      = array_fill( 0, 300, array( 'x' ) );
+		$html       = self::ds1_html( array( null, $items, 'NEXT_PAGE_TOKEN', $meta, null, 0 ) );
+		$this->assertSame( 368, $this->provider->extract_album_total_count( $html, 300 ) );
+	}
+
+	public function test_total_count_is_unknown_when_it_disagrees_with_the_page(): void {
+		$items = array_fill( 0, 300, array( 'x' ) );
+		$meta  = array_fill( 0, 22, null );
+		// No count at all.
+		$this->assertNull( $this->provider->extract_album_total_count( self::ds1_html( array( null, $items, 'NEXT', array() ) ), 300 ) );
+		// A next page exists, but the count says there is nothing more.
+		$meta[21] = 300;
+		$this->assertNull( $this->provider->extract_album_total_count( self::ds1_html( array( null, $items, 'NEXT', $meta ) ), 300 ) );
+		// No next page, but the count says there is more.
+		$meta[21] = 368;
+		$this->assertNull( $this->provider->extract_album_total_count( self::ds1_html( array( null, $items, null, $meta ) ), 300 ) );
+	}
+
+	public function test_total_count_is_unknown_without_the_data_block(): void {
+		$this->assertNull( $this->provider->extract_album_total_count( '<html></html>', 10 ) );
+	}
+
+	public function test_total_count_of_the_album_fixture_matches_its_items(): void {
+		$this->assertSame( 44, $this->provider->extract_album_total_count( self::$album_html, 1 ) );
+	}
 }

@@ -51,18 +51,18 @@ class JZSA_Renderer {
 			$html .= $this->render_unplayable_video_notice( $config['unplayable-videos'] );
 		}
 
-		$html .= $this->render_album_texts( $config, 'top' );
+		$html .= $this->render_album_texts( $config, 'top' ) . $this->render_album_more_link( $config, 'top' );
 
 		// Gallery mode: plain thumbnail gallery, no Swiper structure
 		if ( isset( $config['mode'] ) && 'gallery' === $config['mode'] ) {
 			$html .= $this->build_thumbnail_gallery_container( $gallery_id, $config );
-			return $html . $this->render_album_texts( $config, 'bottom' );
+			return $html . $this->render_album_more_link( $config, 'bottom' ) . $this->render_album_texts( $config, 'bottom' );
 		}
 
 		// Build Swiper gallery container
 		$html .= $this->build_gallery_container( $gallery_id, $config );
 
-		return $html . $this->render_album_texts( $config, 'bottom' );
+		return $html . $this->render_album_more_link( $config, 'bottom' ) . $this->render_album_texts( $config, 'bottom' );
 	}
 
 	/**
@@ -210,6 +210,56 @@ class JZSA_Renderer {
 	}
 
 	/**
+	 * Render the album-more-link notice when the album has more items than are shown.
+	 *
+	 * Shown only when the album's total is known, the source or the plugin's cap
+	 * left items out, and the site did not choose a smaller limit itself.
+	 *
+	 * @param array  $config   Gallery configuration.
+	 * @param string $position 'top' or 'bottom'.
+	 * @return string HTML, or '' when not shown.
+	 */
+	private function render_album_more_link( $config, $position ) {
+		$placement = isset( $config['album-more-link-position'] ) ? $config['album-more-link-position'] : 'both';
+		if ( 'both' !== $placement && $placement !== $position ) {
+			return '';
+		}
+		if ( ! $this->album_has_more_items( $config ) ) {
+			return '';
+		}
+
+		$text = $this->resolve_album_text( $config, 'album-more-link' );
+		$url  = isset( $config['album-url'] ) ? esc_url( $config['album-url'] ) : '';
+		if ( '' === $text || '' === $url ) {
+			return '';
+		}
+
+		$styles = $this->album_width_styles( $config );
+
+		return sprintf(
+			'<p class="jzsa-album-more-link jzsa-album-more-link-%s"%s><a href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
+			esc_attr( $position ),
+			$this->style_attribute( $styles ),
+			$url,
+			esc_html( $text )
+		);
+	}
+
+	/**
+	 * Whether the album holds more items than the plugin could load.
+	 *
+	 * @param array $config Gallery configuration.
+	 * @return bool
+	 */
+	private function album_has_more_items( $config ) {
+		if ( ! empty( $config['limit-explicit'] ) || ! isset( $config['album-total-count'] ) || null === $config['album-total-count'] ) {
+			return false;
+		}
+		$available = isset( $config['album-available-count'] ) ? intval( $config['album-available-count'] ) : 0;
+		return $available > 0 && intval( $config['album-total-count'] ) > $available;
+	}
+
+	/**
 	 * Resolve {album-title}, {items} and {source} in an album-level text parameter.
 	 *
 	 * @param array  $config Gallery configuration.
@@ -234,6 +284,7 @@ class JZSA_Renderer {
 				array(
 					'{album-title}' => isset( $config['album-title'] ) ? (string) $config['album-title'] : '',
 					'{items}'       => (string) $items,
+					'{total-items}' => isset( $config['album-total-count'] ) ? (string) intval( $config['album-total-count'] ) : (string) $items,
 					'{source}'      => $this->album_source_name( $config ),
 				)
 			)

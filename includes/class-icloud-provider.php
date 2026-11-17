@@ -231,8 +231,9 @@ class JZSA_ICloud_Provider {
 			'is_deprecated' => false,
 			'data'          => array(
 				'title'  => isset( $stream['streamName'] ) ? (string) $stream['streamName'] : null,
-				'photos' => $photos,
-				'count'  => count( $photos ),
+				'photos'      => $photos,
+				'count'       => count( $photos ),
+				'total_count' => count( $photos ),
 			),
 			'error'         => null,
 		);
@@ -434,8 +435,9 @@ class JZSA_ICloud_Provider {
 			'is_deprecated' => false,
 			'data'          => array(
 				'title'  => isset( $album['share']['fields']['cloudkit.title']['value'] ) ? (string) $album['share']['fields']['cloudkit.title']['value'] : null,
-				'photos' => $photos,
-				'count'  => count( $photos ),
+				'photos'      => $photos,
+				'count'       => count( $photos ),
+				'total_count' => count( $photos ),
 			),
 			'error'         => null,
 		);

@@ -303,6 +303,19 @@ class OrchestratorConfigTest extends TestCase {
         $this->assertSame( 900, $config['lightbox-source-height'] );
     }
 
+    public function test_album_more_link_is_on_by_default_and_can_be_turned_off(): void {
+        $default = $this->config( array() );
+        $this->assertStringContainsString( '{total-items}', $default['album-more-link'] );
+        $this->assertSame( 'both', $default['album-more-link-position'] );
+        $this->assertFalse( $default['limit-explicit'] );
+
+        $this->assertSame( '', $this->config( array( 'album-more-link' => 'false' ) )['album-more-link'] );
+        $this->assertSame( 'More in {source}', $this->config( array( 'album-more-link' => 'More in {source}' ) )['album-more-link'] );
+        $this->assertSame( 'top', $this->config( array( 'album-more-link-position' => 'top' ) )['album-more-link-position'] );
+        $this->assertSame( 'both', $this->config( array( 'album-more-link-position' => 'middle' ) )['album-more-link-position'] );
+        $this->assertTrue( $this->config( array( 'limit' => '50' ) )['limit-explicit'] );
+    }
+
     public function test_limit_and_download_warning_are_clamped(): void {
         $high = $this->config(
             array(

@@ -467,6 +467,12 @@ class JZSA_Shared_Albums {
 			$should_refresh = true;
 		}
 
+		// Caches from before the album total was stored: refetch a full Google
+		// page once, so the more-items notice can tell whether the album has more.
+		if ( ! $should_refresh && $this->cache_lacks_total_count( $cached_data, $album_url ) ) {
+			$should_refresh = true;
+		}
+
 		if ( ! $should_refresh && false !== $cached_data ) {
 			// Use cached data - merge with current config
 				$hydrated_cached_items = $this->hydrate_cached_photo_meta(
@@ -485,6 +491,7 @@ class JZSA_Shared_Albums {
 					$config['show-videos']
 				);
 			$config['album-title']              = $cached_data['title'] ?? null;
+			$config                             = $this->apply_album_total_count( $config, $cached_data );
 			$config['show-deprecation-warning'] = $cached_data['is_deprecated'];
 			$config['unplayable-videos']        = $this->unplayable_video_names( $cached_data['photos'] );
 			$config                            = $this->apply_progressive_slider_loading_config( $config );
@@ -524,6 +531,7 @@ class JZSA_Shared_Albums {
 					$config['show-videos']
 				);
 				$config['album-title']              = $backup_data['title'] ?? null;
+				$config                             = $this->apply_album_total_count( $config, $backup_data );
 				$config['show-deprecation-warning'] = $backup_data['is_deprecated'];
 				$config['unplayable-videos']        = $this->unplayable_video_names( $backup_data['photos'] );
 				$config                            = $this->apply_progressive_slider_loading_config( $config );
@@ -538,6 +546,7 @@ class JZSA_Shared_Albums {
 			'title'         => $result['data']['title'] ?? null,
 			'photos'        => $result['data']['photos'], // Base URLs without dimensions
 			'is_deprecated' => $result['is_deprecated'],
+			'total_count'   => $result['data']['total_count'] ?? null,
 		);
 
 		// Cache the fetched BASE photo URLs (without dimensions) and title.
@@ -568,6 +577,7 @@ class JZSA_Shared_Albums {
 			);
 
 		$config['album-title']              = $result['data']['title'] ?? null;
+		$config                             = $this->apply_album_total_count( $config, $fresh_cache_data );
 		$config['show-deprecation-warning'] = $result['is_deprecated'];
 		$config['unplayable-videos']        = $this->unplayable_video_names( $result['data']['photos'] );
 		$config                            = $this->apply_progressive_slider_loading_config( $config );
@@ -1068,6 +1078,7 @@ class JZSA_Shared_Albums {
 
 				// Entry count
 				'limit'                => $this->parse_limit( $atts ),
+				'limit-explicit'       => isset( $atts['limit'] ) && intval( $atts['limit'] ) > 0,
 
 			// Video controls
 			'video-controls-autohide' => $video_controls_autohide,
@@ -1304,6 +1315,10 @@ class JZSA_Shared_Albums {
 			'album-heading-position'          => $this->parse_album_text_position( $atts, 'album-heading-position', 'top' ),
 			'album-heading-gap'               => $this->parse_album_text_gap( $atts, 'album-heading-gap' ),
 			'album-link'                      => $this->parse_info_box( $atts, 'album-link', '' ),
+			'album-more-link'                 => $this->parse_album_more_link( $atts ),
+			'album-more-link-position'        => ( isset( $atts['album-more-link-position'] ) && in_array( $atts['album-more-link-position'], array( 'top', 'bottom', 'both' ), true ) )
+				? $atts['album-more-link-position']
+				: 'both',
 			'album-link-text-align'           => ( isset( $atts['album-link-text-align'] ) && in_array( $atts['album-link-text-align'], array( 'left', 'center', 'right' ), true ) )
 				? $atts['album-link-text-align']
 				: 'left',
@@ -2195,6 +2210,27 @@ class JZSA_Shared_Albums {
 	}
 
 	/**
+	 * Parse album-more-link: the notice shown when the album has more items than
+	 * the plugin can display. On by default; "false" or an empty value turns it off.
+	 *
+	 * @param array $atts Attributes.
+	 * @return string Text format, or '' when off.
+	 */
+	private function parse_album_more_link( $atts ) {
+		if ( ! isset( $atts['album-more-link'] ) ) {
+			/* translators: {items}, {total-items} and {source} are placeholders, keep them as they are. */
+			return __( 'Showing {items} of {total-items} items. View the whole album in {source}', 'janzeman-shared-albums-for-google-photos' );
+		}
+
+		$value = sanitize_text_field( $atts['album-more-link'] );
+		if ( in_array( strtolower( trim( $value ) ), array( '', 'false', 'off', 'no', '0' ), true ) ) {
+			return '';
+		}
+
+		return $value;
+	}
+
+	/**
 	 * Parse album-heading-gap or album-link-gap: space between the text and the album (pixels, 0-100).
 	 *
 	 * @param array  $atts Shortcode attributes.
@@ -2329,6 +2365,41 @@ class JZSA_Shared_Albums {
 			}
 		}
 		return 'contain';
+	}
+
+	/**
+	 * Whether a cached Google album predates the stored album total and may hide more items.
+	 *
+	 * @param mixed  $cached_data Cached album data.
+	 * @param string $album_url   Album URL.
+	 * @return bool
+	 */
+	private function cache_lacks_total_count( $cached_data, $album_url ) {
+		return is_array( $cached_data )
+			&& ! array_key_exists( 'total_count', $cached_data )
+			&& isset( $cached_data['photos'] ) && is_array( $cached_data['photos'] )
+			&& count( $cached_data['photos'] ) >= self::MAX_PHOTOS
+			&& ! JZSA_ICloud_Provider::is_icloud_url( $album_url );
+	}
+
+	/**
+	 * Pass the album's total item count to the renderer for the more-items notice.
+	 *
+	 * album-total-count is the number of items in the whole album; album-available-count
+	 * is how many of them the plugin could load (what the source listed, at most MAX_PHOTOS).
+	 *
+	 * @param array $config     Gallery configuration.
+	 * @param array $album_data Cached or fetched album data (photos, total_count).
+	 * @return array
+	 */
+	private function apply_album_total_count( $config, $album_data ) {
+		$listed = isset( $album_data['photos'] ) && is_array( $album_data['photos'] ) ? count( $album_data['photos'] ) : 0;
+		$total  = isset( $album_data['total_count'] ) && is_int( $album_data['total_count'] ) ? $album_data['total_count'] : null;
+
+		$config['album-total-count']     = null === $total ? null : max( $total, $listed );
+		$config['album-available-count'] = min( $listed, self::MAX_PHOTOS );
+
+		return $config;
 	}
 
 	/**
@@ -2993,6 +3064,7 @@ class JZSA_Shared_Albums {
 			'title'         => $result['data']['title'] ?? null,
 			'photos'        => $result['data']['photos'],
 			'is_deprecated' => $result['is_deprecated'],
+			'total_count'   => $result['data']['total_count'] ?? null,
 		);
 
 		set_transient( $cache_key, $cached_data, $cache_duration );
@@ -3953,6 +4025,7 @@ class JZSA_Shared_Albums {
 				'title'         => $result['data']['title'] ?? null,
 				'photos'        => $result['data']['photos'],
 				'is_deprecated' => $result['is_deprecated'],
+				'total_count'   => $result['data']['total_count'] ?? null,
 			),
 			$cache_duration
 		);
@@ -3964,6 +4037,7 @@ class JZSA_Shared_Albums {
 				'title'         => $result['data']['title'] ?? null,
 				'photos'        => $result['data']['photos'],
 				'is_deprecated' => $result['is_deprecated'],
+				'total_count'   => $result['data']['total_count'] ?? null,
 			),
 			self::BACKUP_CACHE_TTL
 		);

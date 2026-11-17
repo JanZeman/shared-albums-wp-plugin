@@ -1068,6 +1068,8 @@ class JZSA_Shortcode_Tools {
 			'album-link-indent',
 			'album-link-position',
 			'album-link-gap',
+			'album-more-link',
+			'album-more-link-position',
 			'info-top',
 			'info-top-secondary',
 			'info-bottom',

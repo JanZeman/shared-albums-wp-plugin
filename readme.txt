@@ -88,6 +88,7 @@ No. The album must be shared by link: in Google Photos with Create link, in iClo
 
 The plugin shows up to 300 photos and videos per album.
 Google Photos usually exposes about 300 items from the shared album page. iCloud shared albums can hold up to 5,000 items; use order="newest" or order="oldest" with limit to choose which ones are shown.
+When an album has more items than are shown, a notice with a link to the whole album appears above and below it (see album-more-link).
 
 = Will this slow down my site? =
 
@@ -137,6 +138,11 @@ Optional. Used only when a WordPress administrator opens the Community page or c
 Contact: support@janzeman.com
 
 == Changelog ==
+
+= 3.0.9 =
+* Albums with more items than the plugin can show (Google Photos shares only about 300 items of a shared album) now show a notice above and below the album with a link to the whole album, for example "Showing 300 of 368 items. View the whole album in Google Photos". Change the text with album-more-link, place it with album-more-link-position (top, bottom or both), or turn it off with album-more-link="false". It is not shown when you set limit yourself. Thanks to Peter Berger for the idea.
+* gallery-layout="justified" now uses each photo's real shape for Google Photos albums, so portrait and landscape photos get tiles of their own width instead of every tile looking the same as in the grid layout, and rows are cropped less.
+* Gallery tiles now show the hand cursor when a click opens the lightbox, not only when it opens fullscreen.
 
 = 3.0.8 =
 * Added gallery-video-inline="false": gallery videos no longer play right in the gallery. Their thumbnails show the video length in the bottom-right corner, like iCloud Photos, and open in the viewer like a photo to play there.

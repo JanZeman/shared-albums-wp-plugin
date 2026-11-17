@@ -2177,6 +2177,25 @@ html.jzsa-lightbox-open body {
     text-align: left;
 }
 
+/* album-more-link: notice that the album has more items than are shown. */
+.jzsa-album-more-link {
+    box-sizing: border-box;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+}
+
+.jzsa-album-more-link-top {
+    margin-top: 0;
+    margin-bottom: 8px;
+}
+
+.jzsa-album-more-link-bottom {
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
 /* album-heading and album-link on the same side of the album share one row
    (.jzsa-album-bar) with a left, center and right place, picked by each
    text's -text-align. Texts in the same place stack. Narrow screens stack
@@ -2211,7 +2230,8 @@ html.jzsa-lightbox-open body {
 
 /* album-link opens a new tab, so it ends with the usual "open in new window" icon,
    drawn in the link's own color. */
-.jzsa-album-link a::after {
+.jzsa-album-link a::after,
+.jzsa-album-more-link a::after {
     content: "";
     display: inline-block;
     width: 0.8em;

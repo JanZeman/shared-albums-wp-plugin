@@ -135,11 +135,47 @@ class JZSA_Data_Provider {
 			'is_deprecated' => $validation['is_deprecated'],
 			'data'          => array(
 				'title'  => $title,
-				'photos' => $photos,
-				'count'  => count( $photos ),
+				'photos'      => $photos,
+				'count'       => count( $photos ),
+				'total_count' => $this->extract_album_total_count( $html, count( $photos ) ),
 			),
 			'error'         => null,
 		);
+	}
+
+	/**
+	 * Number of items in the whole album, which can be more than the page lists.
+	 *
+	 * The shared album page embeds only the first items (about 300) in its
+	 * "ds:1" data block: [null, items, next-page token, album meta, ...]. The
+	 * album meta holds the album's total item count at index 21. The count is
+	 * trusted only when it agrees with the page: no next-page token means it
+	 * must equal the items listed, a token means it must be larger. Otherwise
+	 * the count is unknown and no notice is shown, rather than a wrong number.
+	 *
+	 * @param string $html  HTML content.
+	 * @param int    $count Number of items extracted from the page.
+	 * @return int|null Total item count, or null when it is not known.
+	 */
+	public function extract_album_total_count( $html, $count ) {
+		if ( ! preg_match( "/AF_initDataCallback\\(\\{key: 'ds:1'.*?data:(.*?), sideChannel:/s", $html, $match ) ) {
+			return null;
+		}
+
+		$data = json_decode( $match[1], true );
+		if ( ! is_array( $data ) || ! isset( $data[1] ) || ! is_array( $data[1] ) ) {
+			return null;
+		}
+
+		$listed   = max( (int) $count, count( $data[1] ) );
+		$has_more = ! empty( $data[2] ) && is_string( $data[2] );
+		$total    = isset( $data[3][21] ) && is_int( $data[3][21] ) ? $data[3][21] : null;
+
+		if ( null === $total || ( $has_more ? $total <= $listed : $total !== $listed ) ) {
+			return null;
+		}
+
+		return $total;
 	}
 
 	/**
