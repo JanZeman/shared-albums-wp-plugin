@@ -153,6 +153,14 @@ class JZSA_Data_Provider {
 	const MAX_EXTRA_PAGES = 20;
 
 	/**
+	 * Seconds all extra page requests together may take, so a slow Google
+	 * answer cannot hold the page render for long; the items so far are kept.
+	 *
+	 * @var int
+	 */
+	const EXTRA_PAGES_TIME_BUDGET = 15;
+
+	/**
 	 * Fetch the album items that the shared album page leaves out.
 	 *
 	 * Google Photos web loads them while scrolling with the "snAcKc" call of
@@ -176,13 +184,18 @@ class JZSA_Data_Provider {
 		$loaded   = is_array( $data[1] ) ? count( $data[1] ) : 0;
 		$max      = class_exists( 'JZSA_Shared_Albums' ) ? JZSA_Shared_Albums::MAX_PHOTOS : 1000;
 		$pages    = '';
+		$deadline = microtime( true ) + self::EXTRA_PAGES_TIME_BUDGET;
 
 		for ( $page = 0; $page < self::MAX_EXTRA_PAGES && '' !== $token && $loaded < $max; $page++ ) {
+			$time_left = (int) floor( $deadline - microtime( true ) );
+			if ( $time_left < 1 ) {
+				break;
+			}
 			$request  = wp_json_encode( array( array( array( 'snAcKc', wp_json_encode( array( $album_id, $token, null, $key ) ), null, 'generic' ) ) ) );
 			$response = wp_remote_post(
 				'https://photos.google.com/_/PhotosUi/data/batchexecute?rpcids=snAcKc&rt=c',
 				array(
-					'timeout'    => 10,
+					'timeout'    => min( 10, $time_left ),
 					'user-agent' => 'WordPress/' . get_bloginfo( 'version' ) . '; ' . get_bloginfo( 'url' ),
 					'headers'    => array( 'Content-Type' => 'application/x-www-form-urlencoded;charset=UTF-8' ),
 					'body'       => array( 'f.req' => $request ),
