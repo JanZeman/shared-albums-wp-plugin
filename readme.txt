@@ -86,8 +86,7 @@ No. The album must be shared by link: in Google Photos with Create link, in iClo
 
 = How many photos can I embed? =
 
-The plugin shows up to 300 photos and videos per album.
-Google Photos usually exposes about 300 items from the shared album page. iCloud shared albums can hold up to 5,000 items; use order="newest" or order="oldest" with limit to choose which ones are shown.
+The plugin shows up to 1,000 photos and videos per album, from Google Photos and iCloud alike. Use limit to show fewer, and order="newest", order="oldest" or order="shuffle" to choose which ones are shown.
 When an album has more items than are shown, a notice with a link to the whole album appears above and below it (see album-more-link).
 
 = Will this slow down my site? =
@@ -140,7 +139,8 @@ Contact: support@janzeman.com
 == Changelog ==
 
 = 3.0.9 =
-* Albums with more items than the plugin can show (Google Photos shares only about 300 items of a shared album) now show a notice above and below the album with a link to the whole album, for example "Showing 300 of 368 items. View the whole album in Google Photos". Change the text with album-more-link, place it with album-more-link-position (top, bottom or both), or turn it off with album-more-link="false". It is not shown when you set limit yourself. Thanks to Peter Berger for the idea.
+* Google Photos albums are no longer cut off at 300 items: the plugin now loads the rest of the album the way Google Photos does when you scroll, and shows up to 1,000 photos and videos per album, for Google Photos and iCloud alike. The default limit is now 1,000 instead of 300, so after updating, albums with more than 300 items show more photos on the page (and the page gets bigger). Set limit="300" to keep the old behavior.
+* New, on by default: albums with more items than the plugin can show (more than 1,000, or when Google Photos could not send the whole album) now show a notice above and below the album with a link to the whole album, for example "Showing 1000 of 1450 items. View the whole album in Google Photos". After updating, it appears on such albums without any change to your shortcodes. Turn it off with album-more-link="false", use your own text (for example in your language) with album-more-link="Only the first {items} of {total-items} photos are shown here. See them all in {source}", and show it only below the album with album-more-link-position="bottom" (top, bottom or both). It is not shown when you set limit yourself. Thanks to Peter Berger for the idea.
 * gallery-layout="justified" now uses each photo's real shape for Google Photos albums, so portrait and landscape photos get tiles of their own width instead of every tile looking the same as in the grid layout, and rows are cropped less.
 * Gallery tiles now show the hand cursor when a click opens the lightbox, not only when it opens fullscreen.
 
@@ -373,7 +373,7 @@ Contact: support@janzeman.com
 == Upgrade Notice ==
 
 = 3.0.9 =
-Shows a notice with a link to the whole album when it has more items than the plugin can show, and justified galleries now follow each Google Photos photo's real shape.
+Shows up to 1,000 items per album instead of 300 (set limit="300" to keep the old behavior). Larger albums get a notice with a link to the whole album, on by default; album-more-link="false" turns it off. Justified galleries follow each photo's real shape.
 
 = 3.0.8 =
 Adds gallery-video-inline and viewer-video-autoplay for iCloud-style video thumbnails, and iCloud albums pick up deleted, added or replaced items within minutes.

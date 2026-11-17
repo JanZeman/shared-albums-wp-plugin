@@ -763,7 +763,7 @@ class JZSA_Admin_Pages {
 					__( 'Camera info (EXIF)', 'janzeman-shared-albums-for-google-photos' ) => __( 'Yes, delivered with the album, without extra requests.', 'janzeman-shared-albums-for-google-photos' ),
 					__( 'Original file names', 'janzeman-shared-albums-for-google-photos' ) => __( 'Yes.', 'janzeman-shared-albums-for-google-photos' ),
 					__( 'Downloads', 'janzeman-shared-albums-for-google-photos' )         => __( 'Yes, with the original file name.', 'janzeman-shared-albums-for-google-photos' ),
-					__( 'Album size', 'janzeman-shared-albums-for-google-photos' )        => __( 'Up to 5,000 photos and videos per shared album.', 'janzeman-shared-albums-for-google-photos' ),
+					__( 'Album size', 'janzeman-shared-albums-for-google-photos' )        => __( 'iCloud holds up to 5,000 photos and videos per shared album; the plugin shows up to 1,000, and larger albums get a link to the whole album.', 'janzeman-shared-albums-for-google-photos' ),
 					__( 'Order', 'janzeman-shared-albums-for-google-photos' )             => __( 'Newest photo first, by the date it was taken. This cannot be changed in the shared album, so use order="oldest" in the shortcode for the opposite order.', 'janzeman-shared-albums-for-google-photos' ),
 				),
 				'notes'    => array(
@@ -796,7 +796,7 @@ class JZSA_Admin_Pages {
 				__( 'Camera info (EXIF)', 'janzeman-shared-albums-for-google-photos' ) => __( 'Yes, loaded per photo in the background and then cached.', 'janzeman-shared-albums-for-google-photos' ),
 				__( 'Original file names', 'janzeman-shared-albums-for-google-photos' ) => __( 'Yes, loaded per photo in the background.', 'janzeman-shared-albums-for-google-photos' ),
 				__( 'Downloads', 'janzeman-shared-albums-for-google-photos' )         => __( 'Yes.', 'janzeman-shared-albums-for-google-photos' ),
-				__( 'Album size', 'janzeman-shared-albums-for-google-photos' )        => __( 'Usually up to 300 entries per album.', 'janzeman-shared-albums-for-google-photos' ),
+				__( 'Album size', 'janzeman-shared-albums-for-google-photos' )        => __( 'The plugin shows up to 1,000 entries per album, and larger albums get a link to the whole album.', 'janzeman-shared-albums-for-google-photos' ),
 				__( 'Order', 'janzeman-shared-albums-for-google-photos' )             => __( 'The album\'s own order, often oldest photo first. The album owner can change it in the album\'s sort setting (Edit album, then Sort photos), or use order="oldest" or order="newest" in the shortcode.', 'janzeman-shared-albums-for-google-photos' ),
 			),
 			'notes'    => array(),

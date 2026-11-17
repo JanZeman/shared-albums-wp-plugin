@@ -1013,4 +1013,67 @@ class DataProviderParseTest extends TestCase {
 	public function test_total_count_of_the_album_fixture_matches_its_items(): void {
 		$this->assertSame( 44, $this->provider->extract_album_total_count( self::$album_html, 1 ) );
 	}
+
+	// -------------------------------------------------------------------------
+	// Paging: items after the first page come from batchexecute
+	// -------------------------------------------------------------------------
+
+	private static function paging_item( int $n ): array {
+		return array( 'AF1QipItem' . $n, array( 'https://lh3.googleusercontent.com/pw/item' . $n, 4000, 3000, null, null, null, null, null, array( null, null, 1 ), array( 1000 + $n ) ), 1694779328702 + $n, 'h' . $n, 7200000 );
+	}
+
+	private static function paging_album_html( array $items, string $token, int $total ): string {
+		$meta     = array_fill( 0, 22, null );
+		$meta[0]  = 'AF1QipAlbum';
+		$meta[19] = 'KEY';
+		$meta[21] = $total;
+		return "<title>Paged - Google Photos</title><script>AF_initDataCallback({key: 'ds:1', hash: '2', data:"
+			. json_encode( array( null, $items, $token, $meta, null, 0 ), JSON_UNESCAPED_SLASHES ) . ', sideChannel: {}});</script>';
+	}
+
+	private static function batchexecute_response( array $items, string $token ): array {
+		$payload = json_encode( array( null, $items, $token, null, null, 0 ), JSON_UNESCAPED_SLASHES );
+		$chunk   = json_encode( array( array( 'wrb.fr', 'snAcKc', $payload, null, null, null, 'generic' ) ) );
+		return array( 'body' => ")]}'\n\n" . strlen( $chunk ) . "\n" . $chunk . "\n", 'response' => array( 'code' => 200 ) );
+	}
+
+	public function test_fetch_album_loads_the_pages_after_the_first(): void {
+		$url = 'https://photos.google.com/share/AF1QipAlbum?key=KEY';
+		$GLOBALS['jzsa_test_http_responses'] = array(
+			$url => array( 'body' => self::paging_album_html( array( self::paging_item( 1 ), self::paging_item( 2 ) ), 'TOKEN2', 5 ), 'response' => array( 'code' => 200 ) ),
+			'https://photos.google.com/_/PhotosUi/data/batchexecute?rpcids=snAcKc&rt=c' => array(
+				'sequence' => array(
+					self::batchexecute_response( array( self::paging_item( 3 ), self::paging_item( 4 ) ), 'TOKEN3' ),
+					self::batchexecute_response( array( self::paging_item( 5 ) ), '' ),
+				),
+			),
+		);
+		$GLOBALS['jzsa_test_http_requests'] = array();
+
+		$result = $this->provider->fetch_album( $url );
+
+		$this->assertTrue( $result['success'] );
+		$this->assertCount( 5, $result['data']['photos'] );
+		$this->assertSame( 5, $result['data']['total_count'] );
+		$this->assertSame( 'AF1QipItem5', $result['data']['photos'][4]['id'] );
+		$this->assertSame( 4000, $result['data']['photos'][4]['width'] );
+
+		$posts = array_values( array_filter( $GLOBALS['jzsa_test_http_requests'], function ( $r ) { return 'POST' === $r['method']; } ) );
+		$this->assertCount( 2, $posts );
+		$this->assertStringContainsString( '\\"TOKEN2\\"', $posts[0]['args']['body']['f.req'] );
+		$this->assertStringContainsString( '\\"TOKEN3\\"', $posts[1]['args']['body']['f.req'] );
+	}
+
+	public function test_fetch_album_keeps_the_first_page_when_a_later_page_fails(): void {
+		$url = 'https://photos.google.com/share/AF1QipAlbum?key=KEY';
+		$GLOBALS['jzsa_test_http_responses'] = array(
+			$url => array( 'body' => self::paging_album_html( array( self::paging_item( 1 ), self::paging_item( 2 ) ), 'TOKEN2', 5 ), 'response' => array( 'code' => 200 ) ),
+		);
+
+		$result = $this->provider->fetch_album( $url );
+
+		$this->assertTrue( $result['success'] );
+		$this->assertCount( 2, $result['data']['photos'] );
+		$this->assertSame( 5, $result['data']['total_count'] );
+	}
 }

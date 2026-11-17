@@ -118,9 +118,11 @@ class JZSA_Data_Provider {
 			);
 		}
 
-		// Extract album metadata
-		$title  = $this->extract_album_title( $html );
-		$photos = $this->extract_photos( $html );
+		// Extract album metadata. The page lists only the first 300 items;
+		// later pages are fetched the way Google Photos web does when scrolling.
+		$title       = $this->extract_album_title( $html );
+		$total_count = $this->extract_album_total_count( $html, 0 );
+		$photos      = $this->extract_photos( $html . $this->fetch_more_pages( $html ) );
 
 		if ( empty( $photos ) ) {
 			return array(
@@ -137,10 +139,112 @@ class JZSA_Data_Provider {
 				'title'  => $title,
 				'photos'      => $photos,
 				'count'       => count( $photos ),
-				'total_count' => $this->extract_album_total_count( $html, count( $photos ) ),
+				'total_count' => $total_count,
 			),
 			'error'         => null,
 		);
+	}
+
+	/**
+	 * Maximum number of extra pages fetched after the album page.
+	 *
+	 * @var int
+	 */
+	const MAX_EXTRA_PAGES = 20;
+
+	/**
+	 * Fetch the album items that the shared album page leaves out.
+	 *
+	 * Google Photos web loads them while scrolling with the "snAcKc" call of
+	 * its batchexecute endpoint: album id, next-page token and the album key.
+	 * Each answer holds the same item records as the page and the next token.
+	 * Stops at the plugin's item cap, after MAX_EXTRA_PAGES, or at the first
+	 * failure; the items fetched so far are kept.
+	 *
+	 * @param string $html Album page HTML.
+	 * @return string The pages' data, in the page's own JSON format, or ''.
+	 */
+	private function fetch_more_pages( $html ) {
+		$data = $this->extract_album_page_data( $html );
+		if ( null === $data || empty( $data[2] ) || ! is_string( $data[2] ) || ! isset( $data[3][0] ) || ! is_string( $data[3][0] ) ) {
+			return '';
+		}
+
+		$album_id = $data[3][0];
+		$key      = isset( $data[3][19] ) && is_string( $data[3][19] ) ? $data[3][19] : null;
+		$token    = $data[2];
+		$loaded   = is_array( $data[1] ) ? count( $data[1] ) : 0;
+		$max      = class_exists( 'JZSA_Shared_Albums' ) ? JZSA_Shared_Albums::MAX_PHOTOS : 1000;
+		$pages    = '';
+
+		for ( $page = 0; $page < self::MAX_EXTRA_PAGES && '' !== $token && $loaded < $max; $page++ ) {
+			$request  = wp_json_encode( array( array( array( 'snAcKc', wp_json_encode( array( $album_id, $token, null, $key ) ), null, 'generic' ) ) ) );
+			$response = wp_remote_post(
+				'https://photos.google.com/_/PhotosUi/data/batchexecute?rpcids=snAcKc&rt=c',
+				array(
+					'timeout'    => 10,
+					'user-agent' => 'WordPress/' . get_bloginfo( 'version' ) . '; ' . get_bloginfo( 'url' ),
+					'headers'    => array( 'Content-Type' => 'application/x-www-form-urlencoded;charset=UTF-8' ),
+					'body'       => array( 'f.req' => $request ),
+				)
+			);
+			if ( is_wp_error( $response ) ) {
+				break;
+			}
+
+			$payload = $this->extract_batchexecute_payload( wp_remote_retrieve_body( $response ), 'snAcKc' );
+			$items   = null === $payload ? null : json_decode( $payload, true );
+			if ( ! is_array( $items ) || ! isset( $items[1] ) || ! is_array( $items[1] ) || empty( $items[1] ) ) {
+				break;
+			}
+
+			$pages .= "\n" . $payload;
+			$loaded += count( $items[1] );
+			$token   = isset( $items[2] ) && is_string( $items[2] ) ? $items[2] : '';
+		}
+
+		return $pages;
+	}
+
+	/**
+	 * The inner JSON of one call's answer in a batchexecute response.
+	 *
+	 * The response is ")]}'" followed by length-prefixed chunks; the answer is
+	 * the chunk ["wrb.fr", rpcid, "<JSON as a string>", ...].
+	 *
+	 * @param string $body  Response body.
+	 * @param string $rpcid Call id.
+	 * @return string|null
+	 */
+	private function extract_batchexecute_payload( $body, $rpcid ) {
+		foreach ( preg_split( '/\r?\n/', (string) $body ) as $line ) {
+			if ( 0 !== strpos( $line, '[["wrb.fr"' ) ) {
+				continue;
+			}
+			$chunk = json_decode( $line, true );
+			if ( is_array( $chunk ) ) {
+				foreach ( $chunk as $entry ) {
+					if ( is_array( $entry ) && isset( $entry[0], $entry[1], $entry[2] ) && 'wrb.fr' === $entry[0] && $rpcid === $entry[1] && is_string( $entry[2] ) ) {
+						return $entry[2];
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The album page's "ds:1" data block: [null, items, next-page token, album meta, ...].
+	 *
+	 * @param string $html Album page HTML.
+	 * @return array|null
+	 */
+	private function extract_album_page_data( $html ) {
+		if ( ! preg_match( "/AF_initDataCallback\\(\\{key: 'ds:1'.*?data:(.*?), sideChannel:/s", $html, $match ) ) {
+			return null;
+		}
+		$data = json_decode( $match[1], true );
+		return is_array( $data ) && isset( $data[1] ) && is_array( $data[1] ) ? $data : null;
 	}
 
 	/**
@@ -158,12 +262,8 @@ class JZSA_Data_Provider {
 	 * @return int|null Total item count, or null when it is not known.
 	 */
 	public function extract_album_total_count( $html, $count ) {
-		if ( ! preg_match( "/AF_initDataCallback\\(\\{key: 'ds:1'.*?data:(.*?), sideChannel:/s", $html, $match ) ) {
-			return null;
-		}
-
-		$data = json_decode( $match[1], true );
-		if ( ! is_array( $data ) || ! isset( $data[1] ) || ! is_array( $data[1] ) ) {
+		$data = $this->extract_album_page_data( $html );
+		if ( null === $data ) {
 			return null;
 		}
 

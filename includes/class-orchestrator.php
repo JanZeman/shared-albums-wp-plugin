@@ -126,14 +126,14 @@ class JZSA_Shared_Albums {
 	 *
 	 * @var int
 	 */
-	const MAX_PHOTOS = 300;
+	const MAX_PHOTOS = 1000;
 
 	/**
 	 * Default maximum number of media entries per album when not overridden via shortcode.
 	 *
 	 * @var int
 	 */
-	const DEFAULT_MAX_PHOTOS_PER_ALBUM = 300;
+	const DEFAULT_MAX_PHOTOS_PER_ALBUM = self::MAX_PHOTOS;
 
 	/**
 	 * Use progressive chunk loading for large slider-only photo albums.
@@ -467,8 +467,8 @@ class JZSA_Shared_Albums {
 			$should_refresh = true;
 		}
 
-		// Caches from before the album total was stored: refetch a full Google
-		// page once, so the more-items notice can tell whether the album has more.
+		// Google caches from before paging (3.0.8 and older) hold at most one
+		// 300-item page; refetch such a full page once to load the rest.
 		if ( ! $should_refresh && $this->cache_lacks_total_count( $cached_data, $album_url ) ) {
 			$should_refresh = true;
 		}
@@ -2368,7 +2368,7 @@ class JZSA_Shared_Albums {
 	}
 
 	/**
-	 * Whether a cached Google album predates the stored album total and may hide more items.
+	 * Whether a cached Google album predates paging and may hide more items.
 	 *
 	 * @param mixed  $cached_data Cached album data.
 	 * @param string $album_url   Album URL.
@@ -2378,7 +2378,7 @@ class JZSA_Shared_Albums {
 		return is_array( $cached_data )
 			&& ! array_key_exists( 'total_count', $cached_data )
 			&& isset( $cached_data['photos'] ) && is_array( $cached_data['photos'] )
-			&& count( $cached_data['photos'] ) >= self::MAX_PHOTOS
+			&& count( $cached_data['photos'] ) >= 300 // One Google album page, all that 3.0.8 and older loaded.
 			&& ! JZSA_ICloud_Provider::is_icloud_url( $album_url );
 	}
 

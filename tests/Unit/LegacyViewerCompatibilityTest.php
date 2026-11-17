@@ -59,6 +59,13 @@ class LegacyViewerCompatibilityTest extends TestCase {
 			$config['show-videos'] = false;
 		}
 
+		// 3.0.9 raised the default and maximum limit from 300 when Google album
+		// paging arrived. The fingerprints were taken before that.
+		if ( ! array_key_exists( 'limit', $atts ) ) {
+			$this->assertSame( JZSA_Shared_Albums::MAX_PHOTOS, $config['limit'], $case_name . ' should show up to the maximum by default' );
+			$config['limit'] = 300;
+		}
+
 		$legacy_projection = array();
 		foreach ( $legacy_keys as $key ) {
 			$this->assertArrayHasKey( $key, $config, $case_name . ' lost legacy key ' . $key );

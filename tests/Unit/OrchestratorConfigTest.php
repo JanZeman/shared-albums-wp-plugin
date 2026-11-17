@@ -45,7 +45,7 @@ class OrchestratorConfigTest extends TestCase {
 		$this->assertSame( 'button-only', $config['lightbox-toggle'] );
 		$this->assertSame( '', $config['info-bottom'] );
 		$this->assertSame( '{page} / {pages}', $config['gallery-info-bottom'] );
-		$this->assertSame( 300, $config['limit'] );
+		$this->assertSame( JZSA_Shared_Albums::MAX_PHOTOS, $config['limit'] );
 		$this->assertSame( 128, $config['download-size-warning'] );
 	}
 
@@ -330,9 +330,9 @@ class OrchestratorConfigTest extends TestCase {
             )
         );
 
-        $this->assertSame( 300, $high['limit'] );
+        $this->assertSame( JZSA_Shared_Albums::MAX_PHOTOS, $high['limit'] );
         $this->assertSame( 512, $high['download-size-warning'] );
-        $this->assertSame( 300, $invalid['limit'] );
+        $this->assertSame( JZSA_Shared_Albums::MAX_PHOTOS, $invalid['limit'] );
         $this->assertSame( 128, $invalid['download-size-warning'] );
     }
 
@@ -363,7 +363,7 @@ class OrchestratorConfigTest extends TestCase {
         $this->assertSame( 2, $config['gallery-columns-tablet'] );
         $this->assertSame( 1, $config['gallery-columns-mobile'] );
         $this->assertSame( 200, $config['gallery-row-height'] );
-        $this->assertSame( 300, $config['gallery-rows'] );
+        $this->assertSame( JZSA_Shared_Albums::MAX_PHOTOS, $config['gallery-rows'] );
         $this->assertSame( 4, $config['gallery-gap'] );
         $this->assertSame( 'on-interaction', $config['gallery-buttons-on-mobile'] );
     }
