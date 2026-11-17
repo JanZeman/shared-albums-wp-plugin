@@ -551,7 +551,8 @@ class JZSA_Shared_Albums {
 
 		// Cache the fetched BASE photo URLs (without dimensions) and title.
 		// This allows re-rendering with different sizes without re-fetching.
-		set_transient( $cache_key, $fresh_cache_data, $cache_duration );
+		list( $fresh_cache_data, $fresh_cache_ttl ) = $this->album_cache_entry( $album_url, $fresh_cache_data, $cache_duration );
+		set_transient( $cache_key, $fresh_cache_data, $fresh_cache_ttl );
 
 		// Keep a long-lived backup so a temporary future failure can still serve data.
 		set_transient( $this->get_backup_cache_key( $album_url ), $fresh_cache_data, self::BACKUP_CACHE_TTL );
@@ -2368,6 +2369,42 @@ class JZSA_Shared_Albums {
 	}
 
 	/**
+	 * How long an album that loaded incompletely is cached before one more try.
+	 *
+	 * @var int
+	 */
+	const INCOMPLETE_ALBUM_RETRY_TTL = 3600;
+
+	/**
+	 * Cache entry and lifetime for freshly fetched album data.
+	 *
+	 * An album that loaded fewer items than it has (and fewer than MAX_PHOTOS),
+	 * for example because a later Google page failed, is cached for an hour
+	 * only, so the plugin tries once more soon. If that try is incomplete too,
+	 * the normal cache time applies, so a lasting failure never refetches
+	 * more than once per cache period. The marker survives in the long-lived
+	 * backup copy, which is read before it is overwritten.
+	 *
+	 * @param string $album_url      Album URL.
+	 * @param array  $data           Album data to cache (photos, total_count, ...).
+	 * @param int    $cache_duration Normal cache time in seconds.
+	 * @return array [ data with 'retry_incomplete' set, TTL in seconds ]
+	 */
+	private function album_cache_entry( $album_url, $data, $cache_duration ) {
+		$listed     = isset( $data['photos'] ) && is_array( $data['photos'] ) ? count( $data['photos'] ) : 0;
+		$total      = isset( $data['total_count'] ) && is_int( $data['total_count'] ) ? $data['total_count'] : null;
+		$incomplete = null !== $total && $listed < min( $total, self::MAX_PHOTOS );
+
+		$previous     = get_transient( $this->get_backup_cache_key( $album_url ) );
+		$already_retried = is_array( $previous ) && ! empty( $previous['retry_incomplete'] );
+
+		$data['retry_incomplete'] = $incomplete && ! $already_retried;
+		$ttl                      = $data['retry_incomplete'] ? min( self::INCOMPLETE_ALBUM_RETRY_TTL, $cache_duration ) : $cache_duration;
+
+		return array( $data, $ttl );
+	}
+
+	/**
 	 * Whether a cached Google album predates paging and may hide more items.
 	 *
 	 * @param mixed  $cached_data Cached album data.
@@ -3067,7 +3104,9 @@ class JZSA_Shared_Albums {
 			'total_count'   => $result['data']['total_count'] ?? null,
 		);
 
-		set_transient( $cache_key, $cached_data, $cache_duration );
+		list( $cached_data, $cache_ttl ) = $this->album_cache_entry( $album_url, $cached_data, $cache_duration );
+		set_transient( $cache_key, $cached_data, $cache_ttl );
+		set_transient( $this->get_backup_cache_key( $album_url ), $cached_data, self::BACKUP_CACHE_TTL );
 
 		return array(
 			'success' => true,
@@ -4019,8 +4058,8 @@ class JZSA_Shared_Albums {
 		$cache_key     = $this->get_cache_key( $album_url );
 		$expiry_key    = $this->get_expiration_key( $album_url );
 		$cache_duration = (int) get_option( $expiry_key, self::DEFAULT_CACHE_REFRESH * 3600 );
-		set_transient(
-			$cache_key,
+		list( $refreshed_data, $refreshed_ttl ) = $this->album_cache_entry(
+			$album_url,
 			array(
 				'title'         => $result['data']['title'] ?? null,
 				'photos'        => $result['data']['photos'],
@@ -4029,18 +4068,10 @@ class JZSA_Shared_Albums {
 			),
 			$cache_duration
 		);
+		set_transient( $cache_key, $refreshed_data, $refreshed_ttl );
 
 		// Keep the long-lived backup in sync so future fallbacks stay fresh.
-		set_transient(
-			$this->get_backup_cache_key( $album_url ),
-			array(
-				'title'         => $result['data']['title'] ?? null,
-				'photos'        => $result['data']['photos'],
-				'is_deprecated' => $result['is_deprecated'],
-				'total_count'   => $result['data']['total_count'] ?? null,
-			),
-			self::BACKUP_CACHE_TTL
-		);
+		set_transient( $this->get_backup_cache_key( $album_url ), $refreshed_data, self::BACKUP_CACHE_TTL );
 
 		// Prepare URLs with standard dimensions.
 		$hydrated_items = $this->hydrate_cached_photo_meta(

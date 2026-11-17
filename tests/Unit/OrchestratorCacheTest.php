@@ -208,4 +208,44 @@ class OrchestratorCacheTest extends TestCase {
     public function test_photo_meta_cache_ttl_is_30_days(): void {
         $this->assertSame( 30 * DAY_IN_SECONDS, JZSA_Shared_Albums::PHOTO_META_CACHE_TTL );
     }
+
+    // -------------------------------------------------------------------------
+    // album_cache_entry: incomplete albums retry once after an hour
+    // -------------------------------------------------------------------------
+
+    public function test_incomplete_album_is_cached_for_an_hour_and_retried_only_once(): void {
+        $url  = 'https://photos.google.com/share/INCOMPLETE';
+        $week = 7 * 24 * 3600;
+        $GLOBALS['jzsa_test_transients'] = array();
+        $data = array( 'photos' => array_fill( 0, 300, 'x' ), 'total_count' => 368 );
+
+        list( $first, $first_ttl ) = $this->invoke( 'album_cache_entry', $url, $data, $week );
+        $this->assertSame( 3600, $first_ttl );
+        $this->assertTrue( $first['retry_incomplete'] );
+
+        // The retry is incomplete again: the normal cache time applies.
+        set_transient( $this->invoke( 'get_backup_cache_key', $url ), $first, 0 );
+        list( $second, $second_ttl ) = $this->invoke( 'album_cache_entry', $url, $data, $week );
+        $this->assertSame( $week, $second_ttl );
+        $this->assertFalse( $second['retry_incomplete'] );
+
+        // A later incomplete load may retry once again.
+        set_transient( $this->invoke( 'get_backup_cache_key', $url ), $second, 0 );
+        $this->assertSame( 3600, $this->invoke( 'album_cache_entry', $url, $data, $week )[1] );
+    }
+
+    public function test_complete_or_capped_albums_keep_the_normal_cache_time(): void {
+        $url  = 'https://photos.google.com/share/COMPLETE';
+        $week = 7 * 24 * 3600;
+        $GLOBALS['jzsa_test_transients'] = array();
+
+        $complete = array( 'photos' => array_fill( 0, 368, 'x' ), 'total_count' => 368 );
+        $this->assertSame( $week, $this->invoke( 'album_cache_entry', $url, $complete, $week )[1] );
+
+        $capped = array( 'photos' => array_fill( 0, JZSA_Shared_Albums::MAX_PHOTOS, 'x' ), 'total_count' => 5000 );
+        $this->assertSame( $week, $this->invoke( 'album_cache_entry', $url, $capped, $week )[1] );
+
+        $unknown = array( 'photos' => array_fill( 0, 300, 'x' ), 'total_count' => null );
+        $this->assertSame( $week, $this->invoke( 'album_cache_entry', $url, $unknown, $week )[1] );
+    }
 }
