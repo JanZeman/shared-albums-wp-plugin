@@ -56,6 +56,7 @@ define( 'JZSA_DEFAULT_VIEWER_OPTION', 'jzsa_default_viewer' );
 define( 'JZSA_PRIMARY_SOURCE_OPTION', 'jzsa_primary_source' );
 define( 'JZSA_SAMPLE_LINKS_OPTION', 'jzsa_sample_links' );
 define( 'JZSA_VIEWER_MIGRATION_NOTICE_OPTION', 'jzsa_viewer_migration_notice' );
+define( 'JZSA_ADMIN_ACCESS_OPTION', 'jzsa_admin_access' );
 define( 'JZSA_VIEWER_MIGRATION_CUTOFF_VERSION', '2.4.0' );
 
 /**
@@ -63,11 +64,15 @@ define( 'JZSA_VIEWER_MIGRATION_CUTOFF_VERSION', '2.4.0' );
  *
  * Defaulting to edit_pages allows Administrators and Editors on standard
  * WordPress installs, while keeping Authors, Contributors, and Subscribers out.
+ * The Access setting can limit it to manage_options (Administrators only).
+ * The jzsa_admin_capability filter wins over both.
  *
  * @return string
  */
 function jzsa_get_admin_capability() {
-	return apply_filters( 'jzsa_admin_capability', 'edit_pages' );
+	$capability = 'administrators' === get_option( JZSA_ADMIN_ACCESS_OPTION, 'editors' ) ? 'manage_options' : 'edit_pages';
+
+	return apply_filters( 'jzsa_admin_capability', $capability );
 }
 
 /**

@@ -61,6 +61,7 @@ class JZSA_Admin_Pages {
 		add_action( 'wp_ajax_jzsa_migrate_shortcode', array( $this, 'handle_migrate_shortcode' ) );
 		add_action( 'wp_ajax_jzsa_set_default_viewer', array( $this, 'handle_set_default_viewer' ) );
 		add_action( 'wp_ajax_jzsa_set_primary_source', array( $this, 'handle_set_primary_source' ) );
+		add_action( 'wp_ajax_jzsa_set_admin_access', array( $this, 'handle_set_admin_access' ) );
 		add_action( 'wp_ajax_jzsa_save_sample_links', array( $this, 'handle_save_sample_links' ) );
 	}
 
@@ -253,6 +254,26 @@ class JZSA_Admin_Pages {
 				</div>
 			</div>
 			<?php $this->render_shortcode_migration_tool(); ?>
+		</div>
+		<?php
+	}
+
+	private function render_admin_access_setting_section() {
+		$access   = 'administrators' === get_option( JZSA_ADMIN_ACCESS_OPTION, 'editors' ) ? 'administrators' : 'editors';
+		$can_edit = current_user_can( 'manage_options' );
+		?>
+		<div class="jzsa-section">
+			<h2><?php esc_html_e( 'Access', 'janzeman-shared-albums-for-google-photos' ); ?></h2>
+			<div class="jzsa-admin-access-setting">
+				<h3><?php esc_html_e( 'Who Can Open the Shared Albums Pages in the Admin', 'janzeman-shared-albums-for-google-photos' ); ?></h3>
+				<label><input type="radio" name="jzsa-admin-access" value="editors" <?php checked( 'editors', $access ); ?> <?php disabled( ! $can_edit ); ?>> <?php esc_html_e( 'Editors and Administrators, default', 'janzeman-shared-albums-for-google-photos' ); ?></label>
+				<label><input type="radio" name="jzsa-admin-access" value="administrators" <?php checked( 'administrators', $access ); ?> <?php disabled( ! $can_edit ); ?>> <?php esc_html_e( 'Administrators only', 'janzeman-shared-albums-for-google-photos' ); ?></label>
+				<p><span id="jzsa-admin-access-status" aria-live="polite"></span></p>
+				<p><?php echo wp_kses_post( __( 'Administrators only hides the Shared Albums menu (Guide, Settings, Community and the cache buttons) from everyone without the <code>manage_options</code> capability. Editors can still add albums to pages, and updating a page or post clears the cache of its albums, so newly added photos show up right away. A role manager plugin can grant <code>manage_options</code> or <code>edit_pages</code> to other roles as needed.', 'janzeman-shared-albums-for-google-photos' ) ); ?></p>
+				<?php if ( ! $can_edit ) : ?>
+					<p><em><?php esc_html_e( 'Only Administrators can change this setting.', 'janzeman-shared-albums-for-google-photos' ); ?></em></p>
+				<?php endif; ?>
+			</div>
 		</div>
 		<?php
 	}
@@ -530,6 +551,7 @@ class JZSA_Admin_Pages {
 				'migrateNonce'    => wp_create_nonce( 'jzsa_migrate_shortcode' ),
 				'defaultViewerNonce' => wp_create_nonce( 'jzsa_set_default_viewer' ),
 				'primarySourceNonce' => wp_create_nonce( 'jzsa_set_primary_source' ),
+				'adminAccessNonce'   => wp_create_nonce( 'jzsa_set_admin_access' ),
 				'sampleLinksNonce'   => wp_create_nonce( 'jzsa_save_sample_links' ),
 			)
 		);
@@ -699,6 +721,7 @@ class JZSA_Admin_Pages {
 		$this->render_settings_notice();
 		$this->render_primary_source_setting_section();
 		$this->render_default_viewer_setting_section();
+		$this->render_admin_access_setting_section();
 		$this->render_page_shell_end();
 	}
 
@@ -3092,6 +3115,24 @@ class JZSA_Admin_Pages {
 		}
 		update_option( JZSA_DEFAULT_VIEWER_OPTION, $viewer, false );
 		wp_send_json_success( array( 'viewer' => $viewer ) );
+	}
+
+	public function handle_set_admin_access() {
+		// Only site administrators may change who can open the plugin pages, so an
+		// Editor cannot lock others out or reopen access an Administrator closed.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Insufficient permissions', 'janzeman-shared-albums-for-google-photos' ), 403 );
+		}
+		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'jzsa_set_admin_access' ) ) {
+			wp_send_json_error( __( 'Invalid nonce', 'janzeman-shared-albums-for-google-photos' ), 403 );
+		}
+		$access = isset( $_POST['access'] ) ? sanitize_key( wp_unslash( $_POST['access'] ) ) : '';
+		if ( ! in_array( $access, array( 'editors', 'administrators' ), true ) ) {
+			wp_send_json_error( __( 'Invalid access setting.', 'janzeman-shared-albums-for-google-photos' ), 400 );
+		}
+		update_option( JZSA_ADMIN_ACCESS_OPTION, $access, false );
+		wp_send_json_success( array( 'access' => $access ) );
 	}
 
 	private function verify_shortcode_tool_request( $action ) {

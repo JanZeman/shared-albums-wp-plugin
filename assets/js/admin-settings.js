@@ -1837,6 +1837,8 @@ function jzsaSetupMigrationTool() {
 
 	jzsaBindRadioSetting( 'jzsa-primary-source', 'jzsa-primary-source-status', 'jzsa_set_primary_source',
 		jzsaAdminAjax.primarySourceNonce, 'source' );
+	jzsaBindRadioSetting( 'jzsa-admin-access', 'jzsa-admin-access-status', 'jzsa_set_admin_access',
+		jzsaAdminAjax.adminAccessNonce, 'access' );
 	jzsaBindSampleLinks();
 
 	// No separate save button: selecting an option takes effect immediately, matching how a

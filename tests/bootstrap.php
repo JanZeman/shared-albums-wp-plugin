@@ -17,6 +17,7 @@ define( 'JZSA_DEFAULT_VIEWER_OPTION', 'jzsa_default_viewer' );
 define( 'JZSA_PRIMARY_SOURCE_OPTION', 'jzsa_primary_source' );
 define( 'JZSA_SAMPLE_LINKS_OPTION', 'jzsa_sample_links' );
 define( 'JZSA_VIEWER_MIGRATION_NOTICE_OPTION', 'jzsa_viewer_migration_notice' );
+define( 'JZSA_ADMIN_ACCESS_OPTION', 'jzsa_admin_access' );
 define( 'JZSA_VIEWER_MIGRATION_CUTOFF_VERSION', '2.4.0' );
 
 function jzsa_get_primary_source() {
@@ -214,6 +215,13 @@ if ( ! function_exists( 'rest_ensure_response' ) ) {
 if ( ! function_exists( 'get_post' ) ) {
     function get_post( $post_id ) {
         return $GLOBALS['jzsa_test_posts'][ $post_id ] ?? null;
+    }
+}
+if ( ! function_exists( 'disabled' ) ) {
+    function disabled( $disabled, $current = true, $display = true ) {
+        $result = (string) $disabled === (string) $current ? " disabled='disabled'" : '';
+        if ( $display ) { echo $result; }
+        return $result;
     }
 }
 if ( ! function_exists( 'get_post_meta' ) ) {

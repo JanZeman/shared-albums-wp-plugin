@@ -85,6 +85,10 @@ class AdminPagesTest extends TestCase {
 				'handle_set_primary_source',
 				array( 'nonce' => 'test-nonce', 'source' => 'icloud' ),
 			),
+			'admin access' => array(
+				'handle_set_admin_access',
+				array( 'nonce' => 'test-nonce', 'access' => 'administrators' ),
+			),
 			'sample albums' => array(
 				'handle_save_sample_links',
 				array( 'nonce' => 'test-nonce', 'source' => 'icloud', 'photo' => 'https://photos.icloud.com/shared/album/0X' ),
@@ -143,6 +147,22 @@ class AdminPagesTest extends TestCase {
 		$this->assertTrue( $response->success );
 		$this->assertSame( array( 'viewer' => 'lightbox' ), $response->data );
 		$this->assertSame( 'lightbox', get_option( JZSA_DEFAULT_VIEWER_OPTION ) );
+	}
+
+	public function test_admin_access_endpoint_saves_only_known_values(): void {
+		$GLOBALS['jzsa_test_current_user_can'] = true;
+		$_POST = array( 'nonce' => 'test-nonce', 'access' => 'everyone' );
+
+		$response = $this->callAjax( 'handle_set_admin_access' );
+
+		$this->assertSame( 400, $response->status_code );
+		$this->assertSame( 'editors', get_option( JZSA_ADMIN_ACCESS_OPTION, 'editors' ) );
+
+		$_POST    = array( 'nonce' => 'test-nonce', 'access' => 'administrators' );
+		$response = $this->callAjax( 'handle_set_admin_access' );
+
+		$this->assertTrue( $response->success );
+		$this->assertSame( 'administrators', get_option( JZSA_ADMIN_ACCESS_OPTION ) );
 	}
 
 	public function test_primary_source_endpoint_saves_only_known_sources(): void {
@@ -360,6 +380,27 @@ class AdminPagesTest extends TestCase {
 			strpos( $output, 'Recommended: Set the Viewer Explicitly' ),
 			strpos( $output, 'Default Viewer for Shortcodes Without an Explicit Viewer' )
 		);
+	}
+
+	public function test_settings_page_access_control_is_read_only_for_non_administrators(): void {
+		$method = $this->reflection->getMethod( 'render_settings_page' );
+
+		$GLOBALS['jzsa_test_current_user_can'] = false;
+		ob_start();
+		$method->invoke( $this->admin_pages );
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString( 'Who Can Open the Shared Albums Pages in the Admin', $output );
+		$this->assertMatchesRegularExpression( '/value="editors"[^>]*checked[^>]*disabled/', $output );
+		$this->assertStringContainsString( 'Only Administrators can change this setting.', $output );
+
+		$GLOBALS['jzsa_test_current_user_can'] = true;
+		ob_start();
+		$method->invoke( $this->admin_pages );
+		$output = ob_get_clean();
+
+		$this->assertStringNotContainsString( 'disabled', $output );
+		$this->assertStringNotContainsString( 'Only Administrators can change this setting.', $output );
 	}
 
 	public function test_settings_page_renders_the_migration_tool_on_upgraded_sites(): void {
