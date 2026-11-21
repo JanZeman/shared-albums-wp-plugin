@@ -216,6 +216,16 @@ if ( ! function_exists( 'get_post' ) ) {
         return $GLOBALS['jzsa_test_posts'][ $post_id ] ?? null;
     }
 }
+if ( ! function_exists( 'get_post_meta' ) ) {
+    function get_post_meta( $post_id, $key = '', $single = false ) {
+        $meta = $GLOBALS['jzsa_test_post_meta'][ $post_id ] ?? array();
+        if ( '' === $key ) {
+            return $meta;
+        }
+        $values = $meta[ $key ] ?? array();
+        return $single ? ( $values[0] ?? '' ) : $values;
+    }
+}
 if ( ! function_exists( 'do_shortcode' ) ) {
     function do_shortcode( $content ) {
         $GLOBALS['jzsa_test_do_shortcode_calls'][] = $content;

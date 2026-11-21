@@ -140,6 +140,7 @@ Contact: support@janzeman.com
 
 = 3.0.10 =
 * On iPhone, the fullscreen button in the lightbox now opens fullscreen right away. Before, fullscreen stayed hidden behind the lightbox until the lightbox was closed, and then showed photos on a see-through background. Tapping the button again goes back to the lightbox. Reported by [@peterpolow](https://profiles.wordpress.org/peterpolow/).
+* Updating a post or page now also clears the cache of albums whose link is kept in a custom field (for example an ACF field that the theme turns into the shortcode), not only of albums in the post text, so photos added to the album later show up right away. Prompted by [@peterpolow](https://profiles.wordpress.org/peterpolow/).
 
 = 3.0.9 =
 * Google Photos albums are no longer cut off at 300 items: the plugin now loads the rest of the album the way Google Photos does when you scroll, and shows up to 1,000 photos and videos per album, for Google Photos and iCloud alike. The default limit is now 1,000 instead of 300, so after updating, albums with more than 300 items show more photos on the page (and the page gets bigger). Set limit="300" to keep the old behavior. Prompted by [@peterpolow](https://profiles.wordpress.org/peterpolow/)'s albums with more than 300 photos.

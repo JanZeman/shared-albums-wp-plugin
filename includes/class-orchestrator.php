@@ -3643,12 +3643,54 @@ class JZSA_Shared_Albums {
 			return;
 		}
 
+		$album_urls = array();
+
 		// Find all jzsa-album shortcodes in post content
 		if ( preg_match_all( '/\[jzsa-album[^\]]*link=["\']([^"\']+)["\'][^\]]*\]/i', $post->post_content, $matches ) ) {
-			foreach ( $matches[1] as $url ) {
-				$this->clear_album_related_caches( $url );
+			$album_urls = $matches[1];
+		}
+
+		// Album links kept in custom fields (for example an ACF field that a
+		// theme template turns into the shortcode) are not in the content.
+		$album_urls = array_merge( $album_urls, $this->find_album_urls_in_post_meta( $post_id ) );
+
+		foreach ( array_unique( $album_urls ) as $url ) {
+			$this->clear_album_related_caches( $url );
+		}
+	}
+
+	/**
+	 * Find Google Photos and iCloud album links in a post's custom fields.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return string[] Album URLs, as stored and with HTML entities decoded.
+	 */
+	private function find_album_urls_in_post_meta( $post_id ) {
+		$meta = get_post_meta( $post_id );
+		if ( ! is_array( $meta ) ) {
+			return array();
+		}
+
+		$pattern = '#https?://(?:photos\.google\.com/share/[^\s"\'<>\]\[]+|photos\.app\.goo\.gl/[A-Za-z0-9_-]+|(?:www\.|photos\.)?icloud\.com/(?:sharedalbum|shared/album)/[^\s"\'<>\]\[]+)#i';
+		$urls    = array();
+
+		foreach ( $meta as $values ) {
+			foreach ( (array) $values as $value ) {
+				if ( ! is_string( $value ) || false === stripos( $value, 'http' ) ) {
+					continue;
+				}
+				// JSON (page builders) escapes slashes.
+				$value = str_replace( '\\/', '/', $value );
+				if ( preg_match_all( $pattern, $value, $matches ) ) {
+					foreach ( $matches[0] as $url ) {
+						$urls[] = $url;
+						$urls[] = html_entity_decode( $url, ENT_QUOTES );
+					}
+				}
 			}
 		}
+
+		return array_values( array_unique( $urls ) );
 	}
 
 /**

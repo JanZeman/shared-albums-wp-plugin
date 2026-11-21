@@ -26,6 +26,7 @@ class OrchestratorAdminAjaxTest extends TestCase {
         $GLOBALS['jzsa_test_transients']            = array();
         $GLOBALS['jzsa_test_options']               = array();
 	        $GLOBALS['jzsa_test_posts']                 = array();
+	        $GLOBALS['jzsa_test_post_meta']             = array();
 	        $GLOBALS['jzsa_test_do_shortcode_calls']    = array();
 	        $GLOBALS['jzsa_test_do_shortcode_output']   = '';
 	        $GLOBALS['jzsa_test_clear_cache_calls']     = array();
@@ -346,5 +347,25 @@ class OrchestratorAdminAjaxTest extends TestCase {
 
         $this->assertSame( array(), $GLOBALS['jzsa_test_transients'] );
         $this->assertSame( array(), $GLOBALS['jzsa_test_options'] );
+    }
+
+    public function test_clear_cache_deletes_album_caches_from_custom_fields(): void {
+        $google_url = 'https://photos.google.com/share/AF1QipAlbum?key=abc';
+        $icloud_url = 'https://www.icloud.com/sharedalbum/#B0aGWZuqDGtB9r';
+        $GLOBALS['jzsa_test_posts'][55] = (object) array(
+            'post_content' => 'Ride report without a shortcode.',
+        );
+        $GLOBALS['jzsa_test_post_meta'][55] = array(
+            'album_link'     => array( $google_url ),
+            '_album_link'    => array( 'field_123abc' ),
+            '_builder_data'  => array( '{"url":"' . str_replace( '/', '\\/', $icloud_url ) . '"}' ),
+        );
+        $GLOBALS['jzsa_test_transients'][ $this->invoke( 'get_cache_key', $google_url ) ] = array( 'title' => 'Google' );
+        $GLOBALS['jzsa_test_transients'][ $this->invoke( 'get_cache_key', $icloud_url ) ] = array( 'title' => 'iCloud' );
+        $GLOBALS['jzsa_test_transients']['unrelated'] = array( 'data' => 'should-remain' );
+
+        $this->orchestrator->clear_cache( 55 );
+
+        $this->assertSame( array( 'unrelated' ), array_keys( $GLOBALS['jzsa_test_transients'] ) );
     }
 }
