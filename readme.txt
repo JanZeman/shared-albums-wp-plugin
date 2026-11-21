@@ -138,6 +138,9 @@ Contact: support@janzeman.com
 
 == Changelog ==
 
+= 3.0.10 =
+* On iPhone, the fullscreen button in the lightbox now opens fullscreen right away. Before, fullscreen stayed hidden behind the lightbox until the lightbox was closed, and then showed photos on a see-through background. Tapping the button again goes back to the lightbox. Reported by [@peterpolow](https://profiles.wordpress.org/peterpolow/).
+
 = 3.0.9 =
 * Google Photos albums are no longer cut off at 300 items: the plugin now loads the rest of the album the way Google Photos does when you scroll, and shows up to 1,000 photos and videos per album, for Google Photos and iCloud alike. The default limit is now 1,000 instead of 300, so after updating, albums with more than 300 items show more photos on the page (and the page gets bigger). Set limit="300" to keep the old behavior. Prompted by [@peterpolow](https://profiles.wordpress.org/peterpolow/)'s albums with more than 300 photos.
 * New, on by default: albums with more items than the plugin can show (more than 1,000, or when Google Photos could not send the whole album) now show a notice above and below the album with a link to the whole album, for example "Showing 1000 of 1450 items. View the whole album in Google Photos". After updating, it appears on such albums without any change to your shortcodes. Turn it off with album-more-link="false", use your own text (for example in your language) with album-more-link="Only the first {items} of {total-items} photos are shown here. See them all in {source}", and show it only below the album with album-more-link-position="bottom" (top, bottom or both). It is not shown when you set limit yourself. Requested by [@peterpolow](https://profiles.wordpress.org/peterpolow/).

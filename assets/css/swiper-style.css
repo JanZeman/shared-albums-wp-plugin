@@ -991,6 +991,25 @@ html.jzsa-lightbox-open body {
     }
 }
 
+/* iPhone pseudo fullscreen entered from inside the lightbox: cover the whole
+   screen (above the backdrop) instead of staying in the size-capped box. */
+.jzsa-album.jzsa-lightbox-active.jzsa-pseudo-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+}
+.jzsa-album.jzsa-lightbox-active.jzsa-pseudo-fullscreen > .jzsa-lightbox-close {
+    display: none;
+}
+
 /* Image fit inside the lightbox box (overrides the inline/fullscreen fit). */
 .jzsa-album.jzsa-lightbox-active[data-lightbox-image-fit="contain"] .swiper-slide img,
 .jzsa-album.jzsa-lightbox-active[data-lightbox-image-fit="contain"] .swiper-zoom-container img {
@@ -1008,6 +1027,16 @@ html.jzsa-lightbox-open body {
    appear later. These combined-state rules add one extra class (0-5-1) so
    fullscreen-image-fit always wins regardless of entry path.
    Each vendor prefix must be in its own rule. */
+.jzsa-album.jzsa-lightbox-active.jzsa-pseudo-fullscreen[data-fullscreen-image-fit="contain"] .swiper-slide img,
+.jzsa-album.jzsa-lightbox-active.jzsa-pseudo-fullscreen[data-fullscreen-image-fit="contain"] .swiper-zoom-container img {
+    object-fit: contain;
+}
+.jzsa-album.jzsa-lightbox-active.jzsa-pseudo-fullscreen[data-fullscreen-image-fit="cover"] .swiper-slide img,
+.jzsa-album.jzsa-lightbox-active.jzsa-pseudo-fullscreen[data-fullscreen-image-fit="cover"] .swiper-zoom-container img {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+}
 .jzsa-album.jzsa-lightbox-active:fullscreen[data-fullscreen-image-fit="contain"] .swiper-slide img,
 .jzsa-album.jzsa-lightbox-active:fullscreen[data-fullscreen-image-fit="contain"] .swiper-zoom-container img {
     object-fit: contain;

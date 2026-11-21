@@ -989,6 +989,12 @@
         var $el = $(element);
         var backdrop = _jzsaLightboxBackdrop;
 
+        // iPhone pseudo fullscreen entered from the lightbox: leave it first,
+        // so it does not stay on the album after the lightbox closes.
+        if ($el.hasClass('jzsa-pseudo-fullscreen')) {
+            exitPseudoFullscreen(element);
+        }
+
         $el.removeClass('jzsa-lightbox-active jzsa-is-fullscreen');
         if (backdrop) {
             $(backdrop).removeClass('jzsa-lightbox-visible').off('click.jzsaLightbox');
@@ -1297,8 +1303,11 @@
             return true;
         }
 
-        // Save scroll position for restoration on exit
-        $el.data('jzsa-scroll-y', window.scrollY || window.pageYOffset);
+        // Save scroll position for restoration on exit. Skip when in the
+        // lightbox: openLightbox already saved it and the page is locked.
+        if (!$el.hasClass('jzsa-lightbox-active')) {
+            $el.data('jzsa-scroll-y', window.scrollY || window.pageYOffset);
+        }
 
         // Paint page background to match fullscreen so browser chrome blends in
         _savedHtmlBg = document.documentElement.style.backgroundColor;
@@ -1339,6 +1348,13 @@
                 element.style.removeProperty('--gallery-bg-color');
             }
             $el.removeData('jzsa-pseudo-fs-original-bg');
+        }
+
+        // Entered from inside the lightbox: return to the lightbox, which
+        // keeps jzsa-is-fullscreen, the scroll lock and the saved scroll.
+        if ($el.hasClass('jzsa-lightbox-active')) {
+            $el.removeClass('jzsa-pseudo-fullscreen');
+            return;
         }
 
         $el.removeClass('jzsa-pseudo-fullscreen jzsa-is-fullscreen');
