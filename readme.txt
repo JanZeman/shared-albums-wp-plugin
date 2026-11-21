@@ -4,7 +4,7 @@ Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 3.0.9
+Stable tag: 3.0.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -376,6 +376,9 @@ Contact: support@janzeman.com
 * Responsive design with touch gestures
 
 == Upgrade Notice ==
+
+= 3.0.10 =
+On iPhone, fullscreen from the lightbox opens right away. Updating a post also clears albums linked from custom fields, and a new Access setting can limit the admin pages to Administrators.
 
 = 3.0.9 =
 Shows up to 1,000 items per album instead of 300 (set limit="300" to keep the old behavior). Larger albums get a notice with a link to the whole album, on by default; album-more-link="false" turns it off. Justified galleries follow each photo's real shape.
