@@ -362,8 +362,12 @@ class AdminPagesTest extends TestCase {
 		$method->invoke( $this->admin_pages );
 		$output = ob_get_clean();
 
-		$this->assertStringContainsString( 'Settings are intentionally limited', $output );
-		$this->assertStringContainsString( 'Most of the plugin is driven by shortcodes, so the global settings stay intentionally small.', $output );
+		$this->assertStringNotContainsString( 'Settings are intentionally limited', $output );
+		// The Access section comes first.
+		$this->assertLessThan(
+			strpos( $output, 'Albums Used by the Samples on the Guide Page' ),
+			strpos( $output, 'Who Can Open the Shared Albums Pages in the Admin' )
+		);
 		$this->assertStringContainsString( 'Recommended: Set the Viewer Explicitly', $output );
 		$this->assertStringContainsString( 'If all your shortcodes set it, you can safely ignore the setting above.', $output );
 		$this->assertStringContainsString( 'The setting above is only a fallback for shortcodes that omit the <code>viewer</code> parameter.', $output );
@@ -424,35 +428,6 @@ class AdminPagesTest extends TestCase {
 
 		// A site that never ran a pre-2.4.0 version has no migration tool to show.
 		$this->assertStringNotContainsString( 'id="jzsa-shortcode-migration"', $output );
-	}
-
-	public function test_settings_notice_can_be_dismissed_per_user(): void {
-		update_user_meta( 1, JZSA_Admin_Pages::SETTINGS_ANNOUNCEMENT_META, '' );
-		$GLOBALS['jzsa_test_current_user_can'] = true;
-		$method = $this->reflection->getMethod( 'render_settings_page' );
-
-		ob_start();
-		$method->invoke( $this->admin_pages );
-		$first_output = ob_get_clean();
-
-		$this->assertStringContainsString( 'jzsa-settings-notice', $first_output );
-		$this->assertStringContainsString( 'Settings are intentionally limited', $first_output );
-		$this->assertStringNotContainsString( 'Viewer Default', $first_output );
-
-		$_POST = array(
-			'nonce' => wp_create_nonce( 'jzsa_dismiss_settings_notice' ),
-		);
-		try {
-			$this->admin_pages->handle_dismiss_settings_notice();
-		} catch ( JZSA_Test_JSON_Response $response ) {
-			$this->assertTrue( $response->success );
-		}
-
-		ob_start();
-		$method->invoke( $this->admin_pages );
-		$second_output = ob_get_clean();
-
-		$this->assertStringNotContainsString( 'jzsa-settings-notice', $second_output );
 	}
 
 	public function test_shortcode_parameters_page_mentions_the_site_default_for_missing_viewer(): void {

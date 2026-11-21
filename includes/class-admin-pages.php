@@ -25,17 +25,7 @@ class JZSA_Admin_Pages {
 	const GOOGLE_SOURCE_SLUG        = 'janzeman-shared-albums-for-google-photos-source-google';
 	const ICLOUD_SOURCE_SLUG        = 'janzeman-shared-albums-for-google-photos-source-icloud';
 	const ANNOUNCEMENT_VERSION      = 'community-2';
-	/**
-	 * Dismissal version for the Settings page explainer.
-	 *
-	 * That notice is not an announcement; it explains why the Settings page is small. It used
-	 * to share ANNOUNCEMENT_VERSION, so every campaign bump re-showed it for no reason. The
-	 * value is frozen at what ANNOUNCEMENT_VERSION held when the two were decoupled, so anyone
-	 * who already dismissed it stays undisturbed.
-	 */
-	const SETTINGS_NOTICE_VERSION   = 'viewer-migration-1';
 	const DASHBOARD_ANNOUNCEMENT_META = 'jzsa_viewer_migration_dashboard_dismissed';
-	const SETTINGS_ANNOUNCEMENT_META  = 'jzsa_viewer_migration_settings_dismissed';
 
 	/**
 	 * Whether Guide-page sample shortcodes should emit lazy placeholders instead
@@ -56,7 +46,6 @@ class JZSA_Admin_Pages {
 		add_filter( 'pre_do_shortcode_tag', array( $this, 'maybe_render_lazy_sample_placeholder' ), 10, 4 );
 		add_action( 'admin_notices', array( $this, 'render_dashboard_announcement' ) );
 		add_action( 'wp_ajax_jzsa_dismiss_announcement', array( $this, 'handle_dismiss_announcement' ) );
-		add_action( 'wp_ajax_jzsa_dismiss_settings_notice', array( $this, 'handle_dismiss_settings_notice' ) );
 		add_action( 'wp_ajax_jzsa_validate_shortcode', array( $this, 'handle_validate_shortcode' ) );
 		add_action( 'wp_ajax_jzsa_migrate_shortcode', array( $this, 'handle_migrate_shortcode' ) );
 		add_action( 'wp_ajax_jzsa_set_default_viewer', array( $this, 'handle_set_default_viewer' ) );
@@ -93,10 +82,6 @@ class JZSA_Admin_Pages {
 			esc_attr( $shortcode ),
 			esc_html__( 'Preview loads as you scroll.', 'janzeman-shared-albums-for-google-photos' )
 		);
-	}
-
-	private function should_show_settings_notice() {
-		return self::SETTINGS_NOTICE_VERSION !== get_user_meta( get_current_user_id(), self::SETTINGS_ANNOUNCEMENT_META, true );
 	}
 
 	/**
@@ -275,39 +260,6 @@ class JZSA_Admin_Pages {
 				<?php endif; ?>
 			</div>
 		</div>
-		<?php
-	}
-
-	private function render_settings_notice() {
-		if ( ! $this->should_show_settings_notice() ) {
-			return;
-		}
-
-		$dismiss_nonce = wp_create_nonce( 'jzsa_dismiss_settings_notice' );
-		?>
-		<div id="jzsa-settings-notice" class="jzsa-settings-notice" role="status" aria-live="polite">
-			<div class="jzsa-settings-notice__body">
-				<h2><?php esc_html_e( 'Settings are intentionally limited', 'janzeman-shared-albums-for-google-photos' ); ?></h2>
-				<p><?php esc_html_e( 'Most of the plugin is driven by shortcodes, so the global settings stay intentionally small. The controls on this page cover only the few things that need a site-wide fallback.', 'janzeman-shared-albums-for-google-photos' ); ?></p>
-			</div>
-			<button type="button" class="jzsa-settings-notice-dismiss" aria-label="<?php esc_attr_e( 'Dismiss this notice', 'janzeman-shared-albums-for-google-photos' ); ?>">&times;</button>
-		</div>
-		<script>
-		( function() {
-			var notice = document.getElementById( 'jzsa-settings-notice' );
-			var btn = notice ? notice.querySelector( '.jzsa-settings-notice-dismiss' ) : null;
-			if ( ! notice || ! btn ) { return; }
-			btn.addEventListener( 'click', function() {
-				notice.style.transition = 'opacity 0.25s';
-				notice.style.opacity = '0';
-				setTimeout( function() { notice.style.display = 'none'; }, 260 );
-				var data = new FormData();
-				data.append( 'action', 'jzsa_dismiss_settings_notice' );
-				data.append( 'nonce', '<?php echo esc_js( $dismiss_nonce ); ?>' );
-				fetch( window.ajaxurl || '/wp-admin/admin-ajax.php', { method: 'POST', body: data } );
-			} );
-		} )();
-		</script>
 		<?php
 	}
 
@@ -718,10 +670,9 @@ class JZSA_Admin_Pages {
 	 */
 	public function render_settings_page() {
 		$this->render_page_shell_start();
-		$this->render_settings_notice();
+		$this->render_admin_access_setting_section();
 		$this->render_primary_source_setting_section();
 		$this->render_default_viewer_setting_section();
-		$this->render_admin_access_setting_section();
 		$this->render_page_shell_end();
 	}
 
@@ -2998,15 +2949,6 @@ class JZSA_Admin_Pages {
 			wp_send_json_error( 'Unauthorized', 403 );
 		}
 		update_user_meta( get_current_user_id(), self::DASHBOARD_ANNOUNCEMENT_META, self::ANNOUNCEMENT_VERSION );
-		wp_send_json_success();
-	}
-
-	public function handle_dismiss_settings_notice() {
-		check_ajax_referer( 'jzsa_dismiss_settings_notice', 'nonce' );
-		if ( ! current_user_can( jzsa_get_admin_capability() ) ) {
-			wp_send_json_error( 'Unauthorized', 403 );
-		}
-		update_user_meta( get_current_user_id(), self::SETTINGS_ANNOUNCEMENT_META, self::SETTINGS_NOTICE_VERSION );
 		wp_send_json_success();
 	}
 
