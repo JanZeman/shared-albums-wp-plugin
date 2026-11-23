@@ -212,6 +212,12 @@ if ( ! function_exists( 'rest_ensure_response' ) ) {
         return $response;
     }
 }
+if ( ! class_exists( 'WP_REST_Posts_Controller' ) ) {
+    class WP_REST_Posts_Controller {}
+}
+if ( ! class_exists( 'WP_REST_Revisions_Controller' ) ) {
+    class WP_REST_Revisions_Controller {}
+}
 if ( ! function_exists( 'get_post' ) ) {
     function get_post( $post_id ) {
         return $GLOBALS['jzsa_test_posts'][ $post_id ] ?? null;

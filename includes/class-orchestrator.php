@@ -225,6 +225,13 @@ class JZSA_Shared_Albums {
 	private $album_rendered = false;
 
 	/**
+	 * Whether this request is the block editor loading or saving a post.
+	 *
+	 * @var bool
+	 */
+	private $is_editor_rest_request = false;
+
+	/**
 	 * Constructor - Initialize plugin
 	 *
 	 * @param string $plugin_file Plugin base file path
@@ -241,6 +248,7 @@ class JZSA_Shared_Albums {
 		// or the lightbox can stop working.
 		add_filter( 'rocket_delay_js_exclusions', array( $this, 'exclude_from_wp_rocket_delay_js' ) );
 		add_action( 'save_post', array( $this, 'clear_cache' ) );
+		add_filter( 'rest_request_before_callbacks', array( $this, 'detect_editor_rest_request' ), 10, 3 );
 		add_action( 'wp_ajax_jzsa_download_image', array( $this, 'handle_download_image' ) );
 		add_action( 'wp_ajax_nopriv_jzsa_download_image', array( $this, 'handle_download_image' ) );
 		// The plugin itself is created on init, so the earliest hook still ahead is wp_loaded.
@@ -447,6 +455,12 @@ class JZSA_Shared_Albums {
 
 		if ( empty( $album_url ) ) {
 			return null;
+		}
+
+		// The block editor never shows the rendered content it gets back when it
+		// loads or saves a post, so the album is not fetched for it.
+		if ( $this->is_editor_rest_request ) {
+			return '';
 		}
 
 		$this->album_rendered = true;
@@ -3629,6 +3643,31 @@ class JZSA_Shared_Albums {
 		}
 
 		return $base_items;
+	}
+
+	/**
+	 * Note when a REST request is the block editor loading or saving a post.
+	 *
+	 * WordPress renders the post content into every post response, also for the
+	 * editor, which only uses the raw content. Rendering an album there fetches
+	 * it from Google Photos or iCloud right after saving cleared its cache, and
+	 * that can stall the save (GitHub issue #14). Public reads (GET, view
+	 * context) still render albums.
+	 *
+	 * @param mixed           $response Response so far, returned unchanged.
+	 * @param array           $handler  Route handler.
+	 * @param WP_REST_Request $request  Request.
+	 * @return mixed
+	 */
+	public function detect_editor_rest_request( $response, $handler, $request ) {
+		$controller = isset( $handler['callback'] ) && is_array( $handler['callback'] ) ? $handler['callback'][0] : null;
+		$is_post_route = $controller instanceof WP_REST_Posts_Controller || $controller instanceof WP_REST_Revisions_Controller;
+
+		if ( $is_post_route && ( 'GET' !== $request->get_method() || 'edit' === $request->get_param( 'context' ) ) ) {
+			$this->is_editor_rest_request = true;
+		}
+
+		return $response;
 	}
 
 	/**

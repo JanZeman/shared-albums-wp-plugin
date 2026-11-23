@@ -284,4 +284,43 @@ class OrchestratorShortcodeTest extends TestCase {
         $cached = $GLOBALS['jzsa_test_transients'][ $this->cacheKey() ];
         $this->assertTrue( (bool) $cached['is_deprecated'] );
     }
+
+    private function editorRequest( string $method, string $context, object $controller ): void {
+        $request = new class( $method, $context ) {
+            public function __construct( private string $method, private string $context ) {}
+            public function get_method(): string { return $this->method; }
+            public function get_param( string $key ): ?string { return 'context' === $key && '' !== $this->context ? $this->context : null; }
+        };
+        $this->orchestrator->detect_editor_rest_request( null, array( 'callback' => array( $controller, 'update_item' ) ), $request );
+    }
+
+    public function test_editor_save_response_does_not_fetch_album(): void {
+        // Issue #14: rendering an album for the editor's save response fetched it
+        // right after saving had cleared its cache.
+        $this->editorRequest( 'POST', '', new \WP_REST_Posts_Controller() );
+
+        $this->assertSame( '', $this->orchestrator->handle_shortcode( array( 'link' => self::ALBUM_URL ) ) );
+        $this->assertSame( 0, $this->provider->calls );
+    }
+
+    public function test_editor_load_in_edit_context_does_not_fetch_album(): void {
+        $this->editorRequest( 'GET', 'edit', new \WP_REST_Revisions_Controller() );
+
+        $this->assertSame( '', $this->orchestrator->handle_shortcode( array( 'link' => self::ALBUM_URL ) ) );
+        $this->assertSame( 0, $this->provider->calls );
+    }
+
+    public function test_public_rest_read_still_renders_album(): void {
+        $this->editorRequest( 'GET', 'view', new \WP_REST_Posts_Controller() );
+
+        $this->assertSame( 'rendered:Fixture Album:2', $this->orchestrator->handle_shortcode( array( 'link' => self::ALBUM_URL ) ) );
+        $this->assertSame( 1, $this->provider->calls );
+    }
+
+    public function test_other_rest_routes_still_render_album(): void {
+        $this->editorRequest( 'POST', '', new \stdClass() );
+
+        $this->assertSame( 'rendered:Fixture Album:2', $this->orchestrator->handle_shortcode( array( 'link' => self::ALBUM_URL ) ) );
+        $this->assertSame( 1, $this->provider->calls );
+    }
 }

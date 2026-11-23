@@ -138,6 +138,9 @@ Contact: support@janzeman.com
 
 == Changelog ==
 
+= 3.0.12 =
+* Fixed: saving a page with albums still waited for the albums to download, because WordPress renders the page for the block editor after saving. Albums are no longer rendered for the editor, which does not show them, so saving takes about a second however large the albums are. Visitors see the albums as before, loaded fresh after the save. Reported in [GitHub issue #14](https://github.com/JanZeman/shared-albums-wp-plugin/issues/14).
+
 = 3.0.11 =
 * Fixed: saving or publishing a page with an album could take very long or leave the block editor loading, because clearing the album cache on save also downloaded the album again from Google Photos or iCloud. Saving now clears the cache without that extra download. Reported in [GitHub issue #14](https://github.com/JanZeman/shared-albums-wp-plugin/issues/14).
 
