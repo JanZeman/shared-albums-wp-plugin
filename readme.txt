@@ -4,7 +4,7 @@ Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 3.0.10
+Stable tag: 3.0.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -379,6 +379,9 @@ Contact: support@janzeman.com
 * Responsive design with touch gestures
 
 == Upgrade Notice ==
+
+= 3.0.11 =
+Saving a page with an album no longer downloads the album an extra time, which could leave the block editor loading.
 
 = 3.0.10 =
 On iPhone, fullscreen from the lightbox opens right away. Updating a post also clears albums linked from custom fields, and a new Access setting can limit the admin pages to Administrators.
