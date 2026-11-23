@@ -4,7 +4,7 @@ Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 3.0.12
+Stable tag: 3.0.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -137,6 +137,9 @@ Optional. Used only when a WordPress administrator opens the Community page or c
 Contact: support@janzeman.com
 
 == Changelog ==
+
+= 3.0.13 =
+* The Shared Albums icon in the WordPress admin menu is redrawn for its small size: four larger aperture blades above an open hand, inside a clean circle, so it reads as clearly as the other menu icons instead of breaking up into small pieces. The plugin logo itself is unchanged.
 
 = 3.0.12 =
 * Fixed: saving or publishing a page with albums could take very long or leave the block editor loading, especially with large Google Photos albums. Saving downloaded the albums again from Google Photos or iCloud, up to twice per album, although the block editor does not show them. Saving now only clears the album cache and takes about a second however large the albums are. Visitors see the albums as before, loaded fresh after the save. Reported in [GitHub issue #14](https://github.com/JanZeman/shared-albums-wp-plugin/issues/14).
@@ -379,6 +382,9 @@ Contact: support@janzeman.com
 * Responsive design with touch gestures
 
 == Upgrade Notice ==
+
+= 3.0.13 =
+A clearer Shared Albums icon in the admin menu.
 
 = 3.0.12 =
 Saving a page with albums no longer waits for the albums to download, so the block editor saves in about a second.
