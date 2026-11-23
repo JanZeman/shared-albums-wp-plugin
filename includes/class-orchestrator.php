@@ -3330,8 +3330,8 @@ class JZSA_Shared_Albums {
 	/**
 	 * Collect known media IDs for an album so related per-photo caches can be cleared.
 	 *
-	 * Uses the cached album payload when present, otherwise falls back to a fresh
-	 * provider fetch.
+	 * Uses the cached album payload, or its long-lived backup. Without either,
+	 * no IDs are known and the per-photo caches simply expire on their own.
 	 *
 	 * @param string $album_url Album share URL.
 	 * @return string[]
@@ -3341,14 +3341,15 @@ class JZSA_Shared_Albums {
 			return array();
 		}
 
+		// Only the cached album is read, never Google Photos or iCloud: this runs
+		// while a post is saved, and a fetch there can take long enough to stall
+		// the editor's save request (GitHub issue #14).
 		$photos = array();
-		$cached = get_transient( $this->get_cache_key( $album_url ) );
-		if ( is_array( $cached ) && ! empty( $cached['photos'] ) && is_array( $cached['photos'] ) ) {
-			$photos = $cached['photos'];
-		} else {
-			$result = $this->get_provider_for_url( $album_url )->fetch_album( $album_url );
-			if ( ! empty( $result['success'] ) && ! empty( $result['data']['photos'] ) && is_array( $result['data']['photos'] ) ) {
-				$photos = $result['data']['photos'];
+		foreach ( array( $this->get_cache_key( $album_url ), $this->get_backup_cache_key( $album_url ) ) as $key ) {
+			$cached = get_transient( $key );
+			if ( is_array( $cached ) && ! empty( $cached['photos'] ) && is_array( $cached['photos'] ) ) {
+				$photos = $cached['photos'];
+				break;
 			}
 		}
 
@@ -3640,6 +3641,12 @@ class JZSA_Shared_Albums {
 		// Get post content to find album URLs
 		$post = get_post( $post_id );
 		if ( ! $post ) {
+			return;
+		}
+
+		// Revisions and autosaves are saved as posts of their own, right after the
+		// post itself or while editing. The post's own save clears its albums.
+		if ( isset( $post->post_type ) && 'revision' === $post->post_type ) {
 			return;
 		}
 

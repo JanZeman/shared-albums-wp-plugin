@@ -309,20 +309,53 @@ class OrchestratorAdminAjaxTest extends TestCase {
         $this->assertArrayHasKey( 'some-key', $GLOBALS['jzsa_test_transients'] );
     }
 
-    public function test_clear_cache_fetches_media_ids_from_provider_when_no_transient(): void {
+    public function test_clear_cache_never_fetches_the_album_when_nothing_is_cached(): void {
+        // Issue #14: a fetch from Google Photos or iCloud while the post is saved
+        // can stall the block editor's save request.
         $album_url = 'https://photos.google.com/share/AF1QipAlbum?key=abc';
         $GLOBALS['jzsa_test_posts'][77] = (object) array(
             'post_content' => '[jzsa-album link="' . $album_url . '"]',
         );
-        // No transient set -- provider fetch will fail with no HTTP response configured,
-        // so get_album_media_ids returns an empty array. clear_cache should still
-        // delete the album/backup/expiry keys (which are absent) without error.
+        $GLOBALS['jzsa_test_http_requests'] = array();
 
         $this->orchestrator->clear_cache( 77 );
 
+        $this->assertSame( array(), $GLOBALS['jzsa_test_http_requests'] );
         $this->assertArrayNotHasKey( $this->invoke( 'get_cache_key', $album_url ), $GLOBALS['jzsa_test_transients'] );
         $this->assertArrayNotHasKey( $this->invoke( 'get_backup_cache_key', $album_url ), $GLOBALS['jzsa_test_transients'] );
         $this->assertArrayNotHasKey( $this->invoke( 'get_expiration_key', $album_url ), $GLOBALS['jzsa_test_options'] );
+    }
+
+    public function test_clear_cache_takes_photo_ids_from_backup_cache(): void {
+        $album_url = 'https://photos.google.com/share/AF1QipAlbum?key=abc';
+        $photo_url = $this->invoke( 'build_photo_page_url', $album_url, 'PHOTO1' );
+        $GLOBALS['jzsa_test_posts'][78] = (object) array(
+            'post_content' => '[jzsa-album link="' . $album_url . '"]',
+        );
+        $GLOBALS['jzsa_test_transients'][ $this->invoke( 'get_backup_cache_key', $album_url ) ] = array(
+            'photos' => array( array( 'id' => 'PHOTO1' ) ),
+        );
+        $GLOBALS['jzsa_test_transients'][ $this->invoke( 'get_photo_meta_cache_key', $photo_url ) ] = array( 'filename' => 'one.jpg' );
+        $GLOBALS['jzsa_test_http_requests'] = array();
+
+        $this->orchestrator->clear_cache( 78 );
+
+        $this->assertSame( array(), $GLOBALS['jzsa_test_transients'] );
+        $this->assertSame( array(), $GLOBALS['jzsa_test_http_requests'] );
+    }
+
+    public function test_clear_cache_ignores_revisions_and_autosaves(): void {
+        $album_url = 'https://photos.google.com/share/AF1QipAlbum?key=abc';
+        $GLOBALS['jzsa_test_posts'][79] = (object) array(
+            'post_type'    => 'revision',
+            'post_content' => '[jzsa-album link="' . $album_url . '"]',
+        );
+        $cache_key = $this->invoke( 'get_cache_key', $album_url );
+        $GLOBALS['jzsa_test_transients'][ $cache_key ] = array( 'title' => 'Cached' );
+
+        $this->orchestrator->clear_cache( 79 );
+
+        $this->assertArrayHasKey( $cache_key, $GLOBALS['jzsa_test_transients'] );
     }
 
     public function test_clear_cache_deletes_album_and_photo_meta_caches_from_post_content(): void {

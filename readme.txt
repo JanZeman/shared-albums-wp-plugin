@@ -138,6 +138,9 @@ Contact: support@janzeman.com
 
 == Changelog ==
 
+= 3.0.11 =
+* Fixed: saving or publishing a page with an album could take very long or leave the block editor loading, because clearing the album cache on save also downloaded the album again from Google Photos or iCloud. Saving now clears the cache without that extra download. Reported in [GitHub issue #14](https://github.com/JanZeman/shared-albums-wp-plugin/issues/14).
+
 = 3.0.10 =
 * On iPhone, the fullscreen button in the lightbox now opens fullscreen right away. Before, fullscreen stayed hidden behind the lightbox until the lightbox was closed, and then showed photos on a see-through background. Tapping the button again goes back to the lightbox. Reported by [@peterpolow](https://profiles.wordpress.org/peterpolow/).
 * Updating a post or page now also clears the cache of albums whose link is kept in a custom field (for example an ACF field that the theme turns into the shortcode), not only of albums in the post text, so photos added to the album later show up right away. Prompted by [@peterpolow](https://profiles.wordpress.org/peterpolow/).
