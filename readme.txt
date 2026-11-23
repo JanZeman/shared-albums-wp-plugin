@@ -139,10 +139,7 @@ Contact: support@janzeman.com
 == Changelog ==
 
 = 3.0.12 =
-* Fixed: saving a page with albums still waited for the albums to download, because WordPress renders the page for the block editor after saving. Albums are no longer rendered for the editor, which does not show them, so saving takes about a second however large the albums are. Visitors see the albums as before, loaded fresh after the save. Reported in [GitHub issue #14](https://github.com/JanZeman/shared-albums-wp-plugin/issues/14).
-
-= 3.0.11 =
-* Fixed: saving or publishing a page with an album could take very long or leave the block editor loading, because clearing the album cache on save also downloaded the album again from Google Photos or iCloud. Saving now clears the cache without that extra download. Reported in [GitHub issue #14](https://github.com/JanZeman/shared-albums-wp-plugin/issues/14).
+* Fixed: saving or publishing a page with albums could take very long or leave the block editor loading, especially with large Google Photos albums. Saving downloaded the albums again from Google Photos or iCloud, up to twice per album, although the block editor does not show them. Saving now only clears the album cache and takes about a second however large the albums are. Visitors see the albums as before, loaded fresh after the save. Reported in [GitHub issue #14](https://github.com/JanZeman/shared-albums-wp-plugin/issues/14).
 
 = 3.0.10 =
 * On iPhone, the fullscreen button in the lightbox now opens fullscreen right away. Before, fullscreen stayed hidden behind the lightbox until the lightbox was closed, and then showed photos on a see-through background. Tapping the button again goes back to the lightbox. Reported by [@peterpolow](https://profiles.wordpress.org/peterpolow/).
@@ -385,9 +382,6 @@ Contact: support@janzeman.com
 
 = 3.0.12 =
 Saving a page with albums no longer waits for the albums to download, so the block editor saves in about a second.
-
-= 3.0.11 =
-Saving a page with an album no longer downloads the album an extra time, which could leave the block editor loading.
 
 = 3.0.10 =
 On iPhone, fullscreen from the lightbox opens right away. Updating a post also clears albums linked from custom fields, and a new Access setting can limit the admin pages to Administrators.
