@@ -101,7 +101,7 @@
 			if (!photo || (photo.type === 'video' && !videoThumbsAreImages)) {
 				return;
 			}
-			[photo.preview || photo.full, photo.thumb].forEach(function(url) {
+			[photo.preview || photo.full, photo.thumb, photo.tile].forEach(function(url) {
 				var parsed = parseStableMediaUrl(url);
 				if (parsed && (!album || parsed.album === album)) {
 					album = parsed.album;
@@ -207,6 +207,53 @@
 			el.setAttribute('src', stable);
 		}
 	}, true);
+
+	// GALLERY TILE RENDITIONS (iCloud)
+	//
+	// Apple only offers fixed sizes: a small thumbnail (about 375 px) and large ones
+	// (about 2048 px or the original, 1-2 MB each). A gallery tile starts with the
+	// small one (photo.tile), as iCloud's own album page does, and switches to the
+	// large one (data-jzsa-upgrade-src) only when the tile is bigger than the
+	// thumbnail in CSS pixels.
+	function galleryTileNeedsUpgrade(img) {
+		var w = img.clientWidth;
+		var h = img.clientHeight;
+		if (!w || !h || !img.naturalWidth || !img.naturalHeight) {
+			return false;
+		}
+		var fit = window.getComputedStyle ? window.getComputedStyle(img).objectFit : 'cover';
+		var scaleW = w / img.naturalWidth;
+		var scaleH = h / img.naturalHeight;
+		var scale = fit === 'contain' ? Math.min(scaleW, scaleH) : Math.max(scaleW, scaleH);
+		return scale > 1.05;
+	}
+
+	function upgradeGalleryTile(img) {
+		var upgrade = img.getAttribute('data-jzsa-upgrade-src');
+		if (!upgrade || !img.complete || !galleryTileNeedsUpgrade(img)) {
+			return;
+		}
+		img.removeAttribute('data-jzsa-upgrade-src');
+		img.setAttribute('src', directMediaUrl(upgrade));
+	}
+
+	document.addEventListener('load', function(event) {
+		var el = event.target;
+		if (el && el.tagName === 'IMG' && el.hasAttribute('data-jzsa-upgrade-src')) {
+			upgradeGalleryTile(el);
+		}
+	}, true);
+
+	var _tileUpgradeTimer = null;
+	window.addEventListener('resize', function() {
+		window.clearTimeout(_tileUpgradeTimer);
+		_tileUpgradeTimer = window.setTimeout(function() {
+			var imgs = document.querySelectorAll('img[data-jzsa-upgrade-src]');
+			for (var i = 0; i < imgs.length; i++) {
+				upgradeGalleryTile(imgs[i]);
+			}
+		}, 250);
+	});
 
 	function jzsaFormatI18n(key, value) {
 		return jzsaI18n(key).replace('%d', String(value));
@@ -5875,7 +5922,6 @@
     function setupProgressiveImageLoading(swiper, $container) {
         var fullImageRegistry = {};
         var fullscreenGateToken = 0;
-        var hasQueuedFullscreenBulkPreload = false;
 
         function setFullscreenQualityGate(active) {
             if (!$container || !$container.length) {
@@ -6034,6 +6080,41 @@
             return $img.length ? $img : null;
         }
 
+        // The gallery's viewer is built hidden at page load; it loads nothing until it is opened.
+        function isHiddenGalleryViewer() {
+            return !!($container && $container.length && $container.hasClass('jzsa-gallery-slideshow') &&
+                !isFullscreen($container[0]));
+        }
+
+        // Slides carry loading="lazy" (see shouldUseLazyHints). The visible slides plus about
+        // one screen before and after them are switched to eager loading, so the next slide is
+        // already there when the user moves on, without downloading the whole album.
+        function loadNearbySlidePreviews() {
+            if (!swiper || !swiper.slides || !swiper.slides.length || isHiddenGalleryViewer()) {
+                return;
+            }
+            var count = swiper.slides.length;
+            var perView = 1;
+            if (typeof swiper.slidesPerViewDynamic === 'function') {
+                perView = Math.max(1, Math.ceil(swiper.slidesPerViewDynamic()));
+            }
+            var margin = Math.max(2, perView);
+            for (var offset = -margin; offset < perView + margin; offset++) {
+                var index = swiper.activeIndex + offset;
+                if (swiper.params && swiper.params.loop) {
+                    index = ((index % count) + count) % count;
+                }
+                var slide = swiper.slides[index];
+                if (!slide) {
+                    continue;
+                }
+                var imgs = slide.querySelectorAll('img[loading="lazy"]');
+                for (var i = 0; i < imgs.length; i++) {
+                    imgs[i].setAttribute('loading', 'eager');
+                }
+            }
+        }
+
         function processOffsets(offsets, processor) {
             if (!swiper || !swiper.slides || !swiper.slides.length) {
                 return;
@@ -6045,17 +6126,6 @@
                 if ($img) {
                     processor($img);
                 }
-            });
-        }
-
-        function preloadAllSlidesFull() {
-            if (!swiper || !swiper.slides || !swiper.slides.length) {
-                return;
-            }
-
-            $(swiper.slides).each(function() {
-                var $img = $(this).find('.jzsa-progressive-image');
-                preloadFullImage($img);
             });
         }
 
@@ -6071,6 +6141,7 @@
         }
 
         function runProgressiveLoadingCycle() {
+            loadNearbySlidePreviews();
             var inFullscreen = !$container || !$container.length || isFullscreen($container[0]);
 
             if (inFullscreen) {
@@ -6103,12 +6174,8 @@
                 // Fullscreen rule: keep visible and nearby queue in full-res.
                 processOffsets([1, -1, 2, -2], loadFullImage);
 
-                // Aggressively preload the queue for smooth looping in fullscreen.
+                // Preload a few more ahead for smooth browsing; never the whole album.
                 processOffsets([3, -3, 4, -4], preloadFullImage);
-                if (!hasQueuedFullscreenBulkPreload) {
-                    hasQueuedFullscreenBulkPreload = true;
-                    preloadAllSlidesFull();
-                }
                 return;
             }
 
@@ -6121,7 +6188,7 @@
             // one, so PHP switches it off there -- see preloadFullImages in class-orchestrator.
             // Deliberately the only gated step: the branch above and the unconditional first
             // call below still run, because fullscreen entry depends on their gate bookkeeping.
-            if (!jzsaShouldPreloadFullImages()) {
+            if (!jzsaShouldPreloadFullImages() || isHiddenGalleryViewer()) {
                 return;
             }
 
@@ -6579,7 +6646,10 @@
         // Two-phase single bootstrap caused visible re-render flicker on some pages.
         // Keep slider mode one-pass for stable rendering.
         var useDeferredSingleFirstPaint = false;
-        var shouldUseLazyHints = mode === 'slider';
+        // Slides load when they are shown or about to be (see loadNearbySlidePreviews),
+        // never the whole album at once. The gallery's viewer (mode 'slideshow') is built
+        // hidden at page load and may never be opened.
+        var shouldUseLazyHints = mode === 'slider' || mode === 'slideshow' || mode === 'carousel';
         var lightboxEnabled = !interactionLock && !!config.lightboxToggle && config.lightboxToggle !== 'disabled';
         var carouselFsEnabled = fullscreenToggle !== 'disabled';
         var showCarouselTileFullscreenButtons =
@@ -8206,6 +8276,7 @@
             var videoAsThumb = isVideo && videoTilesAreThumbnails;
             var baseSrc = photo.preview || photo.full;
             var src = isVideo && !videoAsThumb ? baseSrc : directMediaUrl(baseSrc);
+            var tileSrc = !isVideo && photo.tile ? photo.tile : baseSrc;
             var itemClass = 'jzsa-gallery-item' + (isVideo ? (videoAsThumb ? ' jzsa-gallery-item-video-thumb' : ' jzsa-gallery-item-video') : '');
             var mediaLabel = isVideo ? 'video' : 'photo';
             var mediaHtml;
@@ -8216,8 +8287,9 @@
             } else {
                 mediaHtml =
                     '<img class="jzsa-gallery-thumb' + tileFillClass + '"' +
-                    galleryThumbSrcAttr($container, baseSrc) +
-                    (baseSrc !== photo.full ? ' data-full-src="' + photo.full + '"' : '') +
+                    galleryThumbSrcAttr($container, tileSrc) +
+                    (tileSrc !== baseSrc ? ' data-jzsa-upgrade-src="' + baseSrc + '"' : '') +
+                    (tileSrc !== photo.full ? ' data-full-src="' + photo.full + '"' : '') +
                     ' data-index="' + globalIndex + '"' +
                     ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (globalIndex + 1) + '"' +
                     ' draggable="false"' +
@@ -8371,6 +8443,7 @@
                 var width = Math.round((item.ratio / totalRatio) * availableWidth);
                 var src   = item.photo.preview || item.photo.full;
                 var isVideo = item.photo.type === 'video';
+                var tileSrc = !isVideo && item.photo.tile ? item.photo.tile : src;
                 var videoAsThumb = isVideo && videoTilesAreThumbnails;
                 var itemClass = 'jzsa-gallery-item' + (isVideo ? (videoAsThumb ? ' jzsa-gallery-item-video-thumb' : ' jzsa-gallery-item-video') : '');
                 var mediaLabel = isVideo ? 'video' : 'photo';
@@ -8382,8 +8455,9 @@
                 } else {
                     mediaHtml =
                         '<img class="jzsa-gallery-thumb jzsa-justified-thumb"' +
-                        galleryThumbSrcAttr($container, src) +
-                        (src !== item.photo.full ? ' data-full-src="' + item.photo.full + '"' : '') +
+                        galleryThumbSrcAttr($container, tileSrc) +
+                        (tileSrc !== src ? ' data-jzsa-upgrade-src="' + src + '"' : '') +
+                        (tileSrc !== item.photo.full ? ' data-full-src="' + item.photo.full + '"' : '') +
                         ' data-index="' + item.index + '"' +
                         ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (item.index + 1) + '"' +
                         ' draggable="false"' +

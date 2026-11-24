@@ -147,6 +147,32 @@ class ICloudProviderTest extends TestCase {
 		$this->assertStringNotContainsString( '=w', $photos[2]['full'] );
 	}
 
+	public function test_gallery_tiles_start_with_the_smallest_rendition_by_default(): void {
+		$orchestrator = new JZSA_Shared_Albums( JZSA_PLUGIN_FILE );
+		$method       = ( new ReflectionClass( $orchestrator ) )->getMethod( 'prepare_photo_urls' );
+
+		$this->stubAlbum();
+		$GLOBALS['jzsa_test_http_responses']['https://p36-sharedstreams.icloud.com/B0aGWZuqDGtB9r/sharedstreams/webstream'] = array(
+			'response' => array( 'code' => 330 ),
+			'body'     => '{"X-Apple-MMe-Host":"p23-sharedstreams.icloud.com"}',
+		);
+		$items = $this->provider->fetch_album( self::ALBUM_URL )['data']['photos'];
+
+		// Default source size (800x600): the 342px rendition does not cover it, so the
+		// preview is the large one and tiles get the small one to start with.
+		$photos = $method->invoke( $orchestrator, $items, 1920, 1080, 800, 600 );
+		$this->assertSame( $this->mediaUrl( 'GUID-IMAGE-1', '2049' ), $photos[0]['preview'] );
+		$this->assertSame( $this->mediaUrl( 'GUID-IMAGE-1', '342' ), $photos[0]['tile'] );
+		// Nothing smaller than the preview exists: no separate tile.
+		$this->assertArrayNotHasKey( 'tile', $photos[1] );
+		// Videos keep their poster.
+		$this->assertArrayNotHasKey( 'tile', $photos[2] );
+
+		// Explicit source-width/source-height: tiles use the preview from the start.
+		$photos = $method->invoke( $orchestrator, $items, 1920, 1080, 1600, 1200 );
+		$this->assertArrayNotHasKey( 'tile', $photos[0] );
+	}
+
 	private function stubCloudKitAlbum(): void {
 		$GLOBALS['jzsa_test_http_responses'] = array(
 			self::CLOUDKIT_RESOLVE => array(

@@ -138,6 +138,10 @@ Contact: support@janzeman.com
 
 == Changelog ==
 
+= 3.0.16 =
+* Faster iCloud galleries: gallery tiles now load Apple's small preview (about 375 px), as iCloud's own album page does, and switch to the large photo only when a tile is bigger than that. Before, every tile loaded the full photo (1 to 2 MB each), so a 48-photo album downloaded about 65 MB instead of about 5 MB. On high-resolution (Retina) screens the tiles can look slightly softer than before; set source-width="800" source-height="600" (or larger) to keep the large photos in the tiles. Reported by [@plauritz](https://profiles.wordpress.org/plauritz/).
+* Albums no longer download every photo up front. The lightbox and fullscreen viewer of a gallery loads nothing until it is opened, carousels load the visible photos and about one screen around them, and fullscreen preloads only the next few photos instead of the whole album. This applies to Google Photos and iCloud albums alike. A 172-photo Google Photos gallery now downloads about 6 MB instead of 25 MB on a desktop and about 2 MB on a phone, and a carousel about 2 MB instead of 25 MB. Opening the lightbox on a photo that is not on screen yet can take a moment longer to show it. Reported by [@plauritz](https://profiles.wordpress.org/plauritz/).
+
 = 3.0.15 =
 * The hand in the Shared Albums admin menu icon is redrawn with smooth, rounded curves: a rounded palm end, a clean fingertip and a clearer thumb. The plugin logo itself is unchanged.
 

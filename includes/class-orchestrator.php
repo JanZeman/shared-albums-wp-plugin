@@ -2975,6 +2975,16 @@ class JZSA_Shared_Albums {
 				);
 				if ( $preview_width && $preview_height ) {
 					$photo['preview'] = $this->pick_fixed_source( $item, $preview_width, $preview_height );
+					// Gallery tiles start with the smallest rendition, as iCloud's own album
+					// page does; the page switches to the preview only for tiles bigger than
+					// it. Explicit source-width/source-height keep the preview from the start.
+					if ( 'video' !== $type && self::DEFAULT_SOURCE_WIDTH === (int) $preview_width && self::DEFAULT_SOURCE_HEIGHT === (int) $preview_height ) {
+						$smallest = reset( $item['sources'] );
+						$tile     = $this->stable_media_url( $item, isset( $smallest['rendition'] ) ? $smallest['rendition'] : '', $smallest['url'] );
+						if ( $tile !== $photo['preview'] ) {
+							$photo['tile'] = $tile;
+						}
+					}
 				}
 				if ( 'video' === $type && ! empty( $item['video'] ) ) {
 					$photo['type']  = 'video';
