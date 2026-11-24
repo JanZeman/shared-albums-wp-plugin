@@ -4,7 +4,7 @@ Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 3.0.13
+Stable tag: 3.0.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -137,6 +137,9 @@ Optional. Used only when a WordPress administrator opens the Community page or c
 Contact: support@janzeman.com
 
 == Changelog ==
+
+= 3.0.14 =
+* The Shared Albums icon in the WordPress admin menu is redrawn again: a complete round aperture resting in an open hand, with fewer, clearer shapes, so it stays recognisable at menu size. The plugin logo itself is unchanged.
 
 = 3.0.13 =
 * The Shared Albums icon in the WordPress admin menu is redrawn for its small size: four larger aperture blades above an open hand, inside a clean circle, so it reads as clearly as the other menu icons instead of breaking up into small pieces. The plugin logo itself is unchanged.
@@ -382,6 +385,9 @@ Contact: support@janzeman.com
 * Responsive design with touch gestures
 
 == Upgrade Notice ==
+
+= 3.0.14 =
+A clearer Shared Albums icon in the admin menu: a round aperture in an open hand.
 
 = 3.0.13 =
 A clearer Shared Albums icon in the admin menu.
