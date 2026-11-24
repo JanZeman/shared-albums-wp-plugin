@@ -4,7 +4,7 @@ Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 3.0.16
+Stable tag: 3.0.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -137,6 +137,9 @@ Optional. Used only when a WordPress administrator opens the Community page or c
 Contact: support@janzeman.com
 
 == Changelog ==
+
+= 3.0.17 =
+* iCloud gallery tiles are sharp again on Retina screens: the full photo loads only where the screen needs it.
 
 = 3.0.16 =
 * Faster albums: photos load as needed, not the whole album at once.
@@ -393,6 +396,9 @@ Contact: support@janzeman.com
 * Responsive design with touch gestures
 
 == Upgrade Notice ==
+
+= 3.0.17 =
+Sharp iCloud gallery tiles on Retina screens.
 
 = 3.0.16 =
 Faster albums, especially iCloud.

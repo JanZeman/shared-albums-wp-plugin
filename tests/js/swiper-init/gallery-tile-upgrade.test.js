@@ -2,10 +2,10 @@ import { describe, test, expect } from 'vitest';
 import { loadHelpers } from '../helpers/loadFromSwiperInit.js';
 
 // iCloud gallery tiles start with the small thumbnail and switch to the large
-// rendition only when the tile is bigger than the thumbnail in CSS pixels.
-function setup(fit = 'cover') {
+// rendition only when the screen needs more pixels than the thumbnail has.
+function setup(fit = 'cover', dpr = 1) {
     return loadHelpers(['galleryTileNeedsUpgrade'], {
-        window: { getComputedStyle: () => ({ objectFit: fit }) },
+        window: { getComputedStyle: () => ({ objectFit: fit }), devicePixelRatio: dpr },
     }).galleryTileNeedsUpgrade;
 }
 
@@ -28,6 +28,11 @@ describe('gallery tile upgrade', () => {
 
     test('tolerates a few percent of upscaling', () => {
         expect(setup()(img(390, 300, 374, 460))).toBe(false);
+    });
+
+    test('upgrades on high-density screens when the thumbnail lacks pixels', () => {
+        expect(setup('cover', 2)(img(240, 180, 374, 460))).toBe(true);
+        expect(setup('cover', 2)(img(150, 110, 374, 460))).toBe(false);
     });
 
     test('does nothing while the image or the tile has no size yet', () => {

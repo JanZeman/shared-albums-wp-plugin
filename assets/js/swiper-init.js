@@ -211,13 +211,15 @@
 	// GALLERY TILE RENDITIONS (iCloud)
 	//
 	// Apple only offers fixed sizes: a small thumbnail (about 375 px) and large ones
-	// (about 2048 px or the original, 1-2 MB each). A gallery tile starts with the
-	// small one (photo.tile), as iCloud's own album page does, and switches to the
-	// large one (data-jzsa-upgrade-src) only when the tile is bigger than the
-	// thumbnail in CSS pixels.
+	// (about 2048 px or the original, 1-2 MB each). A gallery tile shows the small
+	// one (photo.tile) right away, as iCloud's own album page does, and once it is
+	// loaded switches to the large one (data-jzsa-upgrade-src) when the screen needs
+	// more pixels than the thumbnail has: on high-density (Retina) screens or for
+	// big tiles. Thumbnails load lazily, so only tiles near the screen get sharpened.
 	function galleryTileNeedsUpgrade(img) {
-		var w = img.clientWidth;
-		var h = img.clientHeight;
+		var dpr = window.devicePixelRatio || 1;
+		var w = img.clientWidth * dpr;
+		var h = img.clientHeight * dpr;
 		if (!w || !h || !img.naturalWidth || !img.naturalHeight) {
 			return false;
 		}
@@ -228,13 +230,37 @@
 		return scale > 1.05;
 	}
 
-	function upgradeGalleryTile(img) {
+	function swapInGalleryTileUpgrade(img) {
 		var upgrade = img.getAttribute('data-jzsa-upgrade-src');
-		if (!upgrade || !img.complete || !galleryTileNeedsUpgrade(img)) {
+		if (!upgrade) {
 			return;
 		}
 		img.removeAttribute('data-jzsa-upgrade-src');
 		img.setAttribute('src', directMediaUrl(upgrade));
+	}
+
+	// Only tiles on or near the screen get the large rendition (iOS loads every
+	// thumbnail eagerly, so the thumbnail load alone does not say that).
+	var _tileUpgradeObserver = null;
+	function upgradeGalleryTile(img) {
+		if (!img.getAttribute('data-jzsa-upgrade-src') || !img.complete || !galleryTileNeedsUpgrade(img)) {
+			return;
+		}
+		if (typeof window.IntersectionObserver !== 'function') {
+			swapInGalleryTileUpgrade(img);
+			return;
+		}
+		if (!_tileUpgradeObserver) {
+			_tileUpgradeObserver = new window.IntersectionObserver(function(entries) {
+				entries.forEach(function(entry) {
+					if (entry.isIntersecting) {
+						_tileUpgradeObserver.unobserve(entry.target);
+						swapInGalleryTileUpgrade(entry.target);
+					}
+				});
+			}, { rootMargin: '200px 0px' });
+		}
+		_tileUpgradeObserver.observe(img);
 	}
 
 	document.addEventListener('load', function(event) {
