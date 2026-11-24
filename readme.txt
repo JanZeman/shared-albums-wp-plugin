@@ -141,6 +141,7 @@ Contact: support@janzeman.com
 = 3.0.16 =
 * Faster albums: photos load as needed, not the whole album at once.
 * iCloud gallery tiles use Apple's small previews (slightly softer on Retina; source-width="1600" keeps full photos). Thanks to [@plauritz](https://profiles.wordpress.org/plauritz/).
+* Fixed: the lightbox of a carousel or slider with width and height showed the photo cut off or not at all.
 
 = 3.0.15 =
 * The hand in the Shared Albums admin menu icon is redrawn with smooth, rounded curves: a rounded palm end, a clean fingertip and a clearer thumb. The plugin logo itself is unchanged.

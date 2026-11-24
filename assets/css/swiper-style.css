@@ -267,13 +267,14 @@ background-color: var(--gallery-bg-color, #FFFFFF);
    proportionally as the container shrinks below the declared width. In mosaic mode,
    the bounded size lives on the outer wrapper, so it needs the same override too.
    Each vendor-prefixed fullscreen pseudo-class must be in its own selector to avoid
-   the whole rule being dropped when a browser encounters an unrecognised pseudo-class. */
+   the whole rule being dropped when a browser encounters an unrecognised pseudo-class.
+   The lightbox is excluded too: there the album fills the lightbox box instead. */
 @supports (aspect-ratio: 1) {
-    .jzsa-album[data-responsive-ar="true"]:not(:fullscreen):not(.jzsa-pseudo-fullscreen) {
+    .jzsa-album[data-responsive-ar="true"]:not(:fullscreen):not(.jzsa-pseudo-fullscreen):not(.jzsa-lightbox-active) {
         aspect-ratio: var(--jzsa-ar);
         height: auto !important;
     }
-    .jzsa-album[data-responsive-ar="true"]:not(:-webkit-full-screen):not(.jzsa-pseudo-fullscreen) {
+    .jzsa-album[data-responsive-ar="true"]:not(:-webkit-full-screen):not(.jzsa-pseudo-fullscreen):not(.jzsa-lightbox-active) {
         aspect-ratio: var(--jzsa-ar);
         height: auto !important;
     }
