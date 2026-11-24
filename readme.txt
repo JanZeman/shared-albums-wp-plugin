@@ -139,21 +139,9 @@ Contact: support@janzeman.com
 == Changelog ==
 
 = 3.0.17 =
-* iCloud gallery tiles are sharp again on Retina screens: the full photo loads only where the screen needs it.
-
-= 3.0.16 =
-* Faster albums: photos load as needed, not the whole album at once.
-* iCloud gallery tiles use Apple's small previews (slightly softer on Retina; source-width="1600" keeps full photos). Thanks to [@plauritz](https://profiles.wordpress.org/plauritz/).
-* Fixed: the lightbox of a carousel or slider with width and height showed the photo cut off or not at all.
-
-= 3.0.15 =
-* The hand in the Shared Albums admin menu icon is redrawn with smooth, rounded curves: a rounded palm end, a clean fingertip and a clearer thumb. The plugin logo itself is unchanged.
-
-= 3.0.14 =
-* The Shared Albums icon in the WordPress admin menu is redrawn again: a complete round aperture resting in an open hand, with fewer, clearer shapes, so it stays recognisable at menu size. The plugin logo itself is unchanged.
-
-= 3.0.13 =
-* The Shared Albums icon in the WordPress admin menu is redrawn for its small size: four larger aperture blades above an open hand, inside a clean circle, so it reads as clearly as the other menu icons instead of breaking up into small pieces. The plugin logo itself is unchanged.
+* Faster albums: photos load as needed, not the whole album at once. iCloud gallery tiles use small previews where they stay sharp. Thanks to [@plauritz](https://profiles.wordpress.org/plauritz/).
+* Fixed: the lightbox of a carousel or slider with width and height cut off the photo.
+* Clearer Shared Albums icon in the admin menu.
 
 = 3.0.12 =
 * Fixed: saving or publishing a page with albums could take very long or leave the block editor loading, especially with large Google Photos albums. Saving downloaded the albums again from Google Photos or iCloud, up to twice per album, although the block editor does not show them. Saving now only clears the album cache and takes about a second however large the albums are. Visitors see the albums as before, loaded fresh after the save. Reported in [GitHub issue #14](https://github.com/JanZeman/shared-albums-wp-plugin/issues/14).
@@ -398,19 +386,7 @@ Contact: support@janzeman.com
 == Upgrade Notice ==
 
 = 3.0.17 =
-Sharp iCloud gallery tiles on Retina screens.
-
-= 3.0.16 =
 Faster albums, especially iCloud.
-
-= 3.0.15 =
-A smoother hand in the Shared Albums admin menu icon.
-
-= 3.0.14 =
-A clearer Shared Albums icon in the admin menu: a round aperture in an open hand.
-
-= 3.0.13 =
-A clearer Shared Albums icon in the admin menu.
 
 = 3.0.12 =
 Saving a page with albums no longer waits for the albums to download, so the block editor saves in about a second.

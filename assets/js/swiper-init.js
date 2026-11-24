@@ -179,6 +179,7 @@
 		$gallery.removeData('jzsaDirectMediaDeferred');
 		var $scope = $gallery.add(document.getElementById(($gallery.attr('id') || '') + '-slideshow'));
 		$scope.find('img[data-jzsa-src]').each(function() {
+			chooseGalleryTileStart(this);
 			this.setAttribute('src', directMediaUrl(this.getAttribute('data-jzsa-src')));
 			this.removeAttribute('data-jzsa-src');
 		});
@@ -211,23 +212,57 @@
 	// GALLERY TILE RENDITIONS (iCloud)
 	//
 	// Apple only offers fixed sizes: a small thumbnail (about 375 px) and large ones
-	// (about 2048 px or the original, 1-2 MB each). A gallery tile shows the small
-	// one (photo.tile) right away, as iCloud's own album page does, and once it is
-	// loaded switches to the large one (data-jzsa-upgrade-src) when the screen needs
-	// more pixels than the thumbnail has: on high-density (Retina) screens or for
-	// big tiles. Thumbnails load lazily, so only tiles near the screen get sharpened.
-	function galleryTileNeedsUpgrade(img) {
+	// (about 2048 px or the original, 1-2 MB each). A gallery tile uses the small one
+	// (photo.tile) when it has enough pixels for the tile on this screen, as iCloud's
+	// own album page does. Where it has not (high-density screens, big tiles), the
+	// tile loads the large one (data-jzsa-upgrade-src) straight away, so it never
+	// waits for two downloads. Thumbnails load lazily, so only tiles near the screen
+	// load at all.
+	function galleryTileLacksPixels(img, imageWidth, imageHeight) {
 		var dpr = window.devicePixelRatio || 1;
 		var w = img.clientWidth * dpr;
 		var h = img.clientHeight * dpr;
-		if (!w || !h || !img.naturalWidth || !img.naturalHeight) {
+		if (!w || !h || !imageWidth || !imageHeight) {
 			return false;
 		}
 		var fit = window.getComputedStyle ? window.getComputedStyle(img).objectFit : 'cover';
-		var scaleW = w / img.naturalWidth;
-		var scaleH = h / img.naturalHeight;
+		var scaleW = w / imageWidth;
+		var scaleH = h / imageHeight;
 		var scale = fit === 'contain' ? Math.min(scaleW, scaleH) : Math.max(scaleW, scaleH);
 		return scale > 1.05;
+	}
+
+	function galleryTileNeedsUpgrade(img) {
+		return galleryTileLacksPixels(img, img.naturalWidth, img.naturalHeight);
+	}
+
+	// Before a tile loads: take the large rendition right away when the thumbnail's
+	// known size is too small for the tile. Tiles not laid out yet keep the thumbnail
+	// and switch after it loads (upgradeGalleryTile).
+	function chooseGalleryTileStart(img) {
+		var upgrade = img.getAttribute('data-jzsa-upgrade-src');
+		var tileW = parseInt(img.getAttribute('data-jzsa-tile-w'), 10);
+		var tileH = parseInt(img.getAttribute('data-jzsa-tile-h'), 10);
+		if (!upgrade || !tileW || !tileH || !galleryTileLacksPixels(img, tileW, tileH)) {
+			return;
+		}
+		img.removeAttribute('data-jzsa-upgrade-src');
+		if (img.hasAttribute('data-jzsa-src')) {
+			img.setAttribute('data-jzsa-src', upgrade);
+		} else {
+			img.setAttribute('src', directMediaUrl(upgrade));
+		}
+	}
+
+	function galleryTileUpgradeAttrs(photo, tileSrc, largeSrc) {
+		if (tileSrc === largeSrc) {
+			return '';
+		}
+		var attrs = ' data-jzsa-upgrade-src="' + largeSrc + '"';
+		if (photo.tile_w && photo.tile_h) {
+			attrs += ' data-jzsa-tile-w="' + parseInt(photo.tile_w, 10) + '" data-jzsa-tile-h="' + parseInt(photo.tile_h, 10) + '"';
+		}
+		return attrs;
 	}
 
 	function swapInGalleryTileUpgrade(img) {
@@ -8314,7 +8349,7 @@
                 mediaHtml =
                     '<img class="jzsa-gallery-thumb' + tileFillClass + '"' +
                     galleryThumbSrcAttr($container, tileSrc) +
-                    (tileSrc !== baseSrc ? ' data-jzsa-upgrade-src="' + baseSrc + '"' : '') +
+                    galleryTileUpgradeAttrs(photo, tileSrc, baseSrc) +
                     (tileSrc !== photo.full ? ' data-full-src="' + photo.full + '"' : '') +
                     ' data-index="' + globalIndex + '"' +
                     ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (globalIndex + 1) + '"' +
@@ -8388,6 +8423,9 @@
         } else {
             $container.html(html);
         }
+        $container.find('img[data-jzsa-upgrade-src]').each(function() {
+            chooseGalleryTileStart(this);
+        });
         initPlyrInContainer($container);
         scheduleDurationPrefetch($container);
         showGalleryThumbsWhenLoaded($container);
@@ -8482,7 +8520,7 @@
                     mediaHtml =
                         '<img class="jzsa-gallery-thumb jzsa-justified-thumb"' +
                         galleryThumbSrcAttr($container, tileSrc) +
-                        (tileSrc !== src ? ' data-jzsa-upgrade-src="' + src + '"' : '') +
+                        galleryTileUpgradeAttrs(item.photo, tileSrc, src) +
                         (tileSrc !== item.photo.full ? ' data-full-src="' + item.photo.full + '"' : '') +
                         ' data-index="' + item.index + '"' +
                         ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (item.index + 1) + '"' +
