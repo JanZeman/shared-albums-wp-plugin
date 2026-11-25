@@ -179,7 +179,6 @@
 		$gallery.removeData('jzsaDirectMediaDeferred');
 		var $scope = $gallery.add(document.getElementById(($gallery.attr('id') || '') + '-slideshow'));
 		$scope.find('img[data-jzsa-src]').each(function() {
-			chooseGalleryTileStart(this);
 			this.setAttribute('src', directMediaUrl(this.getAttribute('data-jzsa-src')));
 			this.removeAttribute('data-jzsa-src');
 		});
@@ -211,13 +210,49 @@
 
 	// GALLERY TILE RENDITIONS (iCloud)
 	//
-	// Apple only offers fixed sizes: a small thumbnail (about 375 px) and large ones
-	// (about 2048 px or the original, 1-2 MB each). A gallery tile uses the small one
-	// (photo.tile) when it has enough pixels for the tile on this screen, as iCloud's
-	// own album page does. Where it has not (high-density screens, big tiles), the
-	// tile loads the large one (data-jzsa-upgrade-src) straight away, so it never
-	// waits for two downloads. Thumbnails load lazily, so only tiles near the screen
-	// load at all.
+	// Apple only offers fixed sizes: a small thumbnail (about 375 px, ~100 KB) and large
+	// ones (about 2048 px or the original, 1-2 MB each), nothing in between. Google can
+	// serve any size, so Google tiles are not affected by anything below.
+	//
+	// 1. Every iCloud tile shows the small thumbnail (photo.tile) first, so the whole
+	//    gallery is visible quickly on every device. The first GALLERY_TILE_EAGER_COUNT
+	//    tiles load right away on all platforms (see galleryTileLoadingAttr).
+	// 2. Once every thumbnail on the screen has loaded, tiles whose thumbnail has fewer
+	//    pixels than the tile needs (high-density screens, big tiles) are replaced by the
+	//    large rendition (data-jzsa-upgrade-src): visible tiles first, then the ones
+	//    below, then the ones above, only within about one screen. Visible tiles are
+	//    upgraded up to GALLERY_TILE_UPGRADE_PARALLEL_VISIBLE at a time (each Apple
+	//    request has a noticeable start-up delay), the others only
+	//    GALLERY_TILE_UPGRADE_PARALLEL at a time, so they never slow down what the
+	//    visitor is looking at. The large image is downloaded in the background
+	//    and swapped in when complete, so a tile never goes blank.
+	// Tiles further away are upgraded when the visitor scrolls to them; the whole album
+	// is never downloaded in full size (mobile data).
+	var GALLERY_TILE_EAGER_COUNT = 100;
+	var GALLERY_TILE_FIRST_SCREEN_COUNT = 12;
+	var GALLERY_TILE_UPGRADE_PARALLEL = 2;
+	var GALLERY_TILE_UPGRADE_PARALLEL_VISIBLE = 6;
+
+	// loading attribute of a gallery tile image.
+	// Google tiles: lazy, except on iOS. On iOS, lazily loaded tiles popped in while
+	// scrolling and the gallery visibly flickered (fixed in April 2026, commits b14df05
+	// "Minimize iPhone flickering" and 8a642bf "Anti-flickering again"), so iOS loads
+	// all Google tiles right away. Google tiles are small (sized for the tile), so that
+	// is cheap.
+	// iCloud tiles (small thumbnail first, see above): the first GALLERY_TILE_EAGER_COUNT
+	// load right away everywhere; only very big albums lazy-load the rest.
+	function galleryTileLoadingAttr(hasSmallTile, position) {
+		if (hasSmallTile) {
+			if (position >= GALLERY_TILE_EAGER_COUNT) {
+				return ' loading="lazy"';
+			}
+			// Browsers fetch only a few images from one host at a time; the first
+			// screen goes first, the rest of the thumbnails queue behind it.
+			return position < GALLERY_TILE_FIRST_SCREEN_COUNT ? ' fetchpriority="high"' : ' fetchpriority="low"';
+		}
+		return IS_IOS ? '' : ' loading="lazy"';
+	}
+
 	function galleryTileLacksPixels(img, imageWidth, imageHeight) {
 		var dpr = window.devicePixelRatio || 1;
 		var w = img.clientWidth * dpr;
@@ -236,85 +271,126 @@
 		return galleryTileLacksPixels(img, img.naturalWidth, img.naturalHeight);
 	}
 
-	// Before a tile loads: take the large rendition right away when the thumbnail's
-	// known size is too small for the tile. Tiles not laid out yet keep the thumbnail
-	// and switch after it loads (upgradeGalleryTile).
-	function chooseGalleryTileStart(img) {
+	function galleryTileUpgradeAttrs(tileSrc, largeSrc) {
+		return tileSrc === largeSrc ? '' : ' data-jzsa-upgrade-src="' + largeSrc + '"';
+	}
+
+	// Order in which tiles get upgraded: visible ones first (top to bottom), then the
+	// ones below the screen (nearest first), then the ones above (nearest first).
+	// Tiles more than one screen away are not upgraded yet (Infinity).
+	function galleryTileUpgradePriority(rect, viewportHeight) {
+		if (!rect || !rect.width || !rect.height) {
+			return Infinity;
+		}
+		if (rect.bottom > 0 && rect.top < viewportHeight) {
+			return rect.top;
+		}
+		if (rect.top >= viewportHeight) {
+			var below = rect.top - viewportHeight;
+			return below <= viewportHeight ? viewportHeight + below : Infinity;
+		}
+		var above = -rect.bottom;
+		return above <= viewportHeight ? 3 * viewportHeight + above : Infinity;
+	}
+
+	function isImageLoaded(img) {
+		return img.complete && img.naturalWidth > 0;
+	}
+
+	var _tileUpgradesRunning = 0;
+	var _tileUpgradeTimer = null;
+
+	function finishGalleryTileUpgrade(img, src) {
+		_tileUpgradesRunning--;
+		if (src && img.isConnected !== false) {
+			img.setAttribute('src', src);
+		}
+		scheduleGalleryTileUpgrades();
+	}
+
+	function startGalleryTileUpgrade(img, visible) {
 		var upgrade = img.getAttribute('data-jzsa-upgrade-src');
-		var tileW = parseInt(img.getAttribute('data-jzsa-tile-w'), 10);
-		var tileH = parseInt(img.getAttribute('data-jzsa-tile-h'), 10);
-		if (!upgrade || !tileW || !tileH || !galleryTileLacksPixels(img, tileW, tileH)) {
-			return;
-		}
 		img.removeAttribute('data-jzsa-upgrade-src');
-		if (img.hasAttribute('data-jzsa-src')) {
-			img.setAttribute('data-jzsa-src', upgrade);
-		} else {
-			img.setAttribute('src', directMediaUrl(upgrade));
+		var src = directMediaUrl(upgrade);
+		var loader = new window.Image();
+		var done = false;
+		_tileUpgradesRunning++;
+		loader.referrerPolicy = 'no-referrer';
+		loader.fetchPriority = visible ? 'high' : 'low';
+		loader.onload = function() {
+			if (!done) {
+				done = true;
+				finishGalleryTileUpgrade(img, src);
+			}
+		};
+		loader.onerror = function() {
+			// Keep the thumbnail; the next attempt would fail the same way.
+			if (!done) {
+				done = true;
+				finishGalleryTileUpgrade(img, null);
+			}
+		};
+		loader.src = src;
+	}
+
+	function runGalleryTileUpgrades() {
+		var imgs = document.querySelectorAll('img.jzsa-gallery-thumb[data-jzsa-upgrade-src]');
+		if (!imgs.length) {
+			return;
+		}
+		var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+		var candidates = [];
+		for (var i = 0; i < imgs.length; i++) {
+			var img = imgs[i];
+			var priority = galleryTileUpgradePriority(img.getBoundingClientRect(), viewportHeight);
+			if (priority === Infinity) {
+				continue;
+			}
+			// Nothing is upgraded while a thumbnail on the screen is still loading.
+			if (!isImageLoaded(img)) {
+				if (priority < viewportHeight) {
+					return;
+				}
+				continue;
+			}
+			if (galleryTileNeedsUpgrade(img)) {
+				candidates.push({ img: img, priority: priority });
+			} else {
+				img.removeAttribute('data-jzsa-upgrade-src');
+			}
+		}
+		candidates.sort(function(x, y) { return x.priority - y.priority; });
+		for (var j = 0; j < candidates.length; j++) {
+			var limit = candidates[j].priority < viewportHeight ? GALLERY_TILE_UPGRADE_PARALLEL_VISIBLE : GALLERY_TILE_UPGRADE_PARALLEL;
+			if (_tileUpgradesRunning >= limit) {
+				break;
+			}
+			startGalleryTileUpgrade(candidates[j].img, candidates[j].priority < viewportHeight);
 		}
 	}
 
-	function galleryTileUpgradeAttrs(photo, tileSrc, largeSrc) {
-		if (tileSrc === largeSrc) {
-			return '';
-		}
-		var attrs = ' data-jzsa-upgrade-src="' + largeSrc + '"';
-		if (photo.tile_w && photo.tile_h) {
-			attrs += ' data-jzsa-tile-w="' + parseInt(photo.tile_w, 10) + '" data-jzsa-tile-h="' + parseInt(photo.tile_h, 10) + '"';
-		}
-		return attrs;
-	}
-
-	function swapInGalleryTileUpgrade(img) {
-		var upgrade = img.getAttribute('data-jzsa-upgrade-src');
-		if (!upgrade) {
+	function scheduleGalleryTileUpgrades() {
+		if (_tileUpgradeTimer) {
 			return;
 		}
-		img.removeAttribute('data-jzsa-upgrade-src');
-		img.setAttribute('src', directMediaUrl(upgrade));
-	}
-
-	// Only tiles on or near the screen get the large rendition (iOS loads every
-	// thumbnail eagerly, so the thumbnail load alone does not say that).
-	var _tileUpgradeObserver = null;
-	function upgradeGalleryTile(img) {
-		if (!img.getAttribute('data-jzsa-upgrade-src') || !img.complete || !galleryTileNeedsUpgrade(img)) {
-			return;
-		}
-		if (typeof window.IntersectionObserver !== 'function') {
-			swapInGalleryTileUpgrade(img);
-			return;
-		}
-		if (!_tileUpgradeObserver) {
-			_tileUpgradeObserver = new window.IntersectionObserver(function(entries) {
-				entries.forEach(function(entry) {
-					if (entry.isIntersecting) {
-						_tileUpgradeObserver.unobserve(entry.target);
-						swapInGalleryTileUpgrade(entry.target);
-					}
-				});
-			}, { rootMargin: '200px 0px' });
-		}
-		_tileUpgradeObserver.observe(img);
+		_tileUpgradeTimer = window.setTimeout(function() {
+			_tileUpgradeTimer = null;
+			if (_tileUpgradesRunning < GALLERY_TILE_UPGRADE_PARALLEL_VISIBLE) {
+				runGalleryTileUpgrades();
+			}
+		}, 150);
 	}
 
 	document.addEventListener('load', function(event) {
 		var el = event.target;
-		if (el && el.tagName === 'IMG' && el.hasAttribute('data-jzsa-upgrade-src')) {
-			upgradeGalleryTile(el);
+		if (el && el.tagName === 'IMG' && el.classList && el.classList.contains('jzsa-gallery-thumb')) {
+			scheduleGalleryTileUpgrades();
 		}
 	}, true);
-
-	var _tileUpgradeTimer = null;
-	window.addEventListener('resize', function() {
-		window.clearTimeout(_tileUpgradeTimer);
-		_tileUpgradeTimer = window.setTimeout(function() {
-			var imgs = document.querySelectorAll('img[data-jzsa-upgrade-src]');
-			for (var i = 0; i < imgs.length; i++) {
-				upgradeGalleryTile(imgs[i]);
-			}
-		}, 250);
-	});
+	window.addEventListener('scroll', scheduleGalleryTileUpgrades, { passive: true });
+	// A scrollable gallery scrolls inside itself (scroll does not bubble; capture it).
+	document.addEventListener('scroll', scheduleGalleryTileUpgrades, { capture: true, passive: true });
+	window.addEventListener('resize', scheduleGalleryTileUpgrades);
 
 	function jzsaFormatI18n(key, value) {
 		return jzsaI18n(key).replace('%d', String(value));
@@ -8330,7 +8406,7 @@
         var videoTilesAreThumbnails = $container.attr('data-gallery-video-inline') === 'false';
 
         var html = '';
-        pageItems.forEach(function(item) {
+        pageItems.forEach(function(item, position) {
             var photo = item.photo;
             var globalIndex = item.index;
             var isVideo = photo.type === 'video';
@@ -8349,12 +8425,12 @@
                 mediaHtml =
                     '<img class="jzsa-gallery-thumb' + tileFillClass + '"' +
                     galleryThumbSrcAttr($container, tileSrc) +
-                    galleryTileUpgradeAttrs(photo, tileSrc, baseSrc) +
+                    galleryTileUpgradeAttrs(tileSrc, baseSrc) +
                     (tileSrc !== photo.full ? ' data-full-src="' + photo.full + '"' : '') +
                     ' data-index="' + globalIndex + '"' +
                     ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (globalIndex + 1) + '"' +
                     ' draggable="false"' +
-                    (IS_IOS ? '' : ' loading="lazy"') +
+                    galleryTileLoadingAttr(tileSrc !== baseSrc, position) +
                     ' decoding="' + (IS_IOS ? 'sync' : 'async') + '"' +
                     ' referrerpolicy="no-referrer"' + tileStyleAttr + '>' +
                     (videoAsThumb ? buildVideoTileDurationHtml(photo) : '');
@@ -8423,9 +8499,6 @@
         } else {
             $container.html(html);
         }
-        $container.find('img[data-jzsa-upgrade-src]').each(function() {
-            chooseGalleryTileStart(this);
-        });
         initPlyrInContainer($container);
         scheduleDurationPrefetch($container);
         showGalleryThumbsWhenLoaded($container);
@@ -8497,6 +8570,7 @@
         var thumbAlbumUrl = $container.attr('data-album-url') || '';
         var videoTilesAreThumbnails = $container.attr('data-gallery-video-inline') === 'false';
         var html = '';
+        var tilePosition = 0;
         rows.forEach(function(row) {
             var totalRatio    = row.reduce(function(sum, item) { return sum + item.ratio; }, 0);
             var totalGap      = gap * (row.length - 1);
@@ -8520,12 +8594,12 @@
                     mediaHtml =
                         '<img class="jzsa-gallery-thumb jzsa-justified-thumb"' +
                         galleryThumbSrcAttr($container, tileSrc) +
-                        galleryTileUpgradeAttrs(item.photo, tileSrc, src) +
+                        galleryTileUpgradeAttrs(tileSrc, src) +
                         (tileSrc !== item.photo.full ? ' data-full-src="' + item.photo.full + '"' : '') +
                         ' data-index="' + item.index + '"' +
                         ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (item.index + 1) + '"' +
                         ' draggable="false"' +
-                        (IS_IOS ? '' : ' loading="lazy"') +
+                        galleryTileLoadingAttr(tileSrc !== src, tilePosition++) +
                         ' decoding="' + (IS_IOS ? 'sync' : 'async') + '"' +
                         ' referrerpolicy="no-referrer"' +
                         ' style="width:100%;height:100%;">' +

@@ -1,31 +1,12 @@
 import { describe, test, expect } from 'vitest';
 import { loadHelpers } from '../helpers/loadFromSwiperInit.js';
 
-// iCloud gallery tiles use the small thumbnail and switch to the large rendition
-// only when the screen needs more pixels than the thumbnail has.
-function load(fit = 'cover', dpr = 1) {
-    return loadHelpers(['galleryTileLacksPixels', 'galleryTileNeedsUpgrade', 'chooseGalleryTileStart'], {
-        window: { getComputedStyle: () => ({ objectFit: fit }), devicePixelRatio: dpr },
-        directMediaUrl: (url) => 'direct:' + url,
-    });
-}
-
+// iCloud gallery tiles show the small thumbnail first and switch to the large
+// rendition only when the screen needs more pixels than the thumbnail has.
 function setup(fit = 'cover', dpr = 1) {
-    return load(fit, dpr).galleryTileNeedsUpgrade;
-}
-
-// A tile image before it loads, with the thumbnail size it would get.
-function tileImg(w, h, attrs) {
-    const a = { 'data-jzsa-upgrade-src': 'large', 'data-jzsa-tile-w': '374', 'data-jzsa-tile-h': '460', ...attrs };
-    return {
-        clientWidth: w,
-        clientHeight: h,
-        getAttribute: (k) => (k in a ? a[k] : null),
-        hasAttribute: (k) => k in a,
-        setAttribute: (k, v) => { a[k] = v; },
-        removeAttribute: (k) => { delete a[k]; },
-        attrs: a,
-    };
+    return loadHelpers(['galleryTileLacksPixels', 'galleryTileNeedsUpgrade'], {
+        window: { getComputedStyle: () => ({ objectFit: fit }), devicePixelRatio: dpr },
+    }).galleryTileNeedsUpgrade;
 }
 
 const img = (w, h, nw, nh) => ({ clientWidth: w, clientHeight: h, naturalWidth: nw, naturalHeight: nh });
@@ -60,35 +41,48 @@ describe('gallery tile upgrade', () => {
     });
 });
 
-describe('gallery tile start', () => {
-    test('keeps the thumbnail where it has enough pixels', () => {
-        const el = tileImg(280, 210, { src: 'thumb' });
-        load('cover', 1).chooseGalleryTileStart(el);
-        expect(el.attrs.src).toBe('thumb');
-        expect(el.attrs['data-jzsa-upgrade-src']).toBe('large');
+describe('gallery tile upgrade order', () => {
+    const { galleryTileUpgradePriority: priority } = loadHelpers(['galleryTileUpgradePriority']);
+    const rect = (top, height = 200) => ({ top, bottom: top + height, width: 300, height });
+    const vh = 800;
+
+    test('visible tiles first, top to bottom', () => {
+        expect(priority(rect(0), vh)).toBeLessThan(priority(rect(500), vh));
+        expect(priority(rect(-100), vh)).toBeLessThan(priority(rect(900), vh));
     });
 
-    test('loads the large rendition straight away on high-density screens', () => {
-        const el = tileImg(280, 210, { src: 'thumb' });
-        load('cover', 2).chooseGalleryTileStart(el);
-        expect(el.attrs.src).toBe('direct:large');
-        expect(el.attrs['data-jzsa-upgrade-src']).toBeUndefined();
+    test('then the tiles below the screen, nearest first, then the ones above', () => {
+        const below1 = priority(rect(850), vh);
+        const below2 = priority(rect(1400), vh);
+        const above1 = priority(rect(-300), vh);
+        expect(priority(rect(700), vh)).toBeLessThan(below1);
+        expect(below1).toBeLessThan(below2);
+        expect(below2).toBeLessThan(above1);
     });
 
-    test('a tile still waiting for direct URLs gets the large URL to load later', () => {
-        const el = tileImg(280, 210, { 'data-jzsa-src': 'thumb' });
-        load('cover', 2).chooseGalleryTileStart(el);
-        expect(el.attrs['data-jzsa-src']).toBe('large');
-        expect(el.attrs.src).toBeUndefined();
+    test('tiles more than one screen away or without size wait', () => {
+        expect(priority(rect(1700), vh)).toBe(Infinity);
+        expect(priority(rect(-1100), vh)).toBe(Infinity);
+        expect(priority({ top: 0, bottom: 0, width: 0, height: 0 }, vh)).toBe(Infinity);
+    });
+});
+
+describe('gallery tile loading attribute', () => {
+    function load(isIos) {
+        return loadHelpers(['galleryTileLoadingAttr'], { IS_IOS: isIos, GALLERY_TILE_EAGER_COUNT: 100, GALLERY_TILE_FIRST_SCREEN_COUNT: 12 }).galleryTileLoadingAttr;
+    }
+
+    test('Google tiles stay lazy except on iOS (April 2026 anti-flicker)', () => {
+        expect(load(false)(false, 0)).toBe(' loading="lazy"');
+        expect(load(true)(false, 500)).toBe('');
     });
 
-    test('keeps the thumbnail while the tile has no size or the thumbnail size is unknown', () => {
-        const hidden = tileImg(0, 0, { src: 'thumb' });
-        load('cover', 2).chooseGalleryTileStart(hidden);
-        expect(hidden.attrs.src).toBe('thumb');
-        const unknown = tileImg(280, 210, { src: 'thumb', 'data-jzsa-tile-w': null });
-        delete unknown.attrs['data-jzsa-tile-w'];
-        load('cover', 2).chooseGalleryTileStart(unknown);
-        expect(unknown.attrs.src).toBe('thumb');
+    test('iCloud thumbnails load right away on every platform, lazy only in very big albums', () => {
+        expect(load(false)(true, 0)).toBe(' fetchpriority="high"');
+        expect(load(true)(true, 11)).toBe(' fetchpriority="high"');
+        expect(load(true)(true, 12)).toBe(' fetchpriority="low"');
+        expect(load(false)(true, 99)).toBe(' fetchpriority="low"');
+        expect(load(false)(true, 100)).toBe(' loading="lazy"');
+        expect(load(true)(true, 100)).toBe(' loading="lazy"');
     });
 });

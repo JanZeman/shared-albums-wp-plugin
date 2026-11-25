@@ -3022,12 +3022,6 @@ class JZSA_Shared_Albums {
 						$tile     = $this->stable_media_url( $item, isset( $smallest['rendition'] ) ? $smallest['rendition'] : '', $smallest['url'] );
 						if ( $tile !== $photo['preview'] ) {
 							$photo['tile'] = $tile;
-							// Its size lets the page pick the large rendition right away where
-							// the thumbnail would be too small (high-density screens).
-							if ( ! empty( $smallest['width'] ) && ! empty( $smallest['height'] ) ) {
-								$photo['tile_w'] = (int) $smallest['width'];
-								$photo['tile_h'] = (int) $smallest['height'];
-							}
 						}
 					}
 				}

@@ -163,9 +163,6 @@ class ICloudProviderTest extends TestCase {
 		$photos = $method->invoke( $orchestrator, $items, 1920, 1080, 800, 600 );
 		$this->assertSame( $this->mediaUrl( 'GUID-IMAGE-1', '2049' ), $photos[0]['preview'] );
 		$this->assertSame( $this->mediaUrl( 'GUID-IMAGE-1', '342' ), $photos[0]['tile'] );
-		// Its size lets the page skip it where it is too small for the screen.
-		$this->assertSame( 342, $photos[0]['tile_w'] );
-		$this->assertGreaterThan( 0, $photos[0]['tile_h'] );
 		// Nothing smaller than the preview exists: no separate tile.
 		$this->assertArrayNotHasKey( 'tile', $photos[1] );
 		// Videos keep their poster.
