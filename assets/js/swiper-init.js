@@ -216,7 +216,7 @@
 	//
 	// 1. Every iCloud tile shows the small thumbnail (photo.tile) first, so the whole
 	//    gallery is visible quickly on every device. The first GALLERY_TILE_EAGER_COUNT
-	//    tiles load right away on all platforms (see galleryTileLoadingAttr).
+	//    tiles load right away on all platforms (see galleryTileLoadPlan).
 	// 2. Once every thumbnail on the screen has loaded, tiles whose thumbnail has fewer
 	//    pixels than the tile needs (high-density screens, big tiles) are replaced by the
 	//    large rendition (data-jzsa-upgrade-src): visible tiles first, then the ones
@@ -233,24 +233,82 @@
 	var GALLERY_TILE_UPGRADE_PARALLEL = 2;
 	var GALLERY_TILE_UPGRADE_PARALLEL_VISIBLE = 6;
 
-	// loading attribute of a gallery tile image.
-	// Google tiles: lazy, except on iOS. On iOS, lazily loaded tiles popped in while
-	// scrolling and the gallery visibly flickered (fixed in April 2026, commits b14df05
-	// "Minimize iPhone flickering" and 8a642bf "Anti-flickering again"), so iOS loads
-	// all Google tiles right away. Google tiles are small (sized for the tile), so that
-	// is cheap.
-	// iCloud tiles (small thumbnail first, see above): the first GALLERY_TILE_EAGER_COUNT
-	// load right away everywhere; only very big albums lazy-load the rest.
-	function galleryTileLoadingAttr(hasSmallTile, position) {
-		if (hasSmallTile) {
-			if (position >= GALLERY_TILE_EAGER_COUNT) {
-				return ' loading="lazy"';
-			}
-			// Browsers fetch only a few images from one host at a time; the first
-			// screen goes first, the rest of the thumbnails queue behind it.
-			return position < GALLERY_TILE_FIRST_SCREEN_COUNT ? ' fetchpriority="high"' : ' fetchpriority="low"';
+	// How a gallery tile image loads: 'lazy' (browser's own lazy loading), 'high' / 'low'
+	// (right away, first screen first) or 'near' (by watchGalleryTilesNearScreen, about
+	// two screens ahead of the visitor).
+	//
+	// Google tiles on desktop and Android: the browser's lazy loading, which works well there.
+	// Google tiles on iOS and all iCloud thumbnails: the first GALLERY_TILE_EAGER_COUNT
+	// load right away. On iOS, the browser's lazy loading starts a tile only just before
+	// it scrolls into view, so tiles popped in while scrolling and the gallery visibly
+	// flickered (fixed in April 2026, commits b14df05 "Minimize iPhone flickering" and
+	// 8a642bf "Anti-flickering again", by loading every tile right away). Loading every
+	// tile of a 1,000-photo album at once is too slow on a phone, so tiles after the
+	// first GALLERY_TILE_EAGER_COUNT load 'near': early enough that they are there
+	// before the visitor reaches them, which keeps the flicker away.
+	function galleryTileLoadPlan(loadsRightAway, position) {
+		if (!loadsRightAway) {
+			return 'lazy';
 		}
-		return IS_IOS ? '' : ' loading="lazy"';
+		if (position >= GALLERY_TILE_EAGER_COUNT) {
+			return 'near';
+		}
+		// Browsers fetch only a few images from one host at a time; the first
+		// screen goes first, the rest of the tiles queue behind it.
+		return position < GALLERY_TILE_FIRST_SCREEN_COUNT ? 'high' : 'low';
+	}
+
+	// src and loading attributes of a gallery tile image (see galleryTileLoadPlan).
+	function galleryTileSrcAttrs($container, url, hasSmallTile, position) {
+		var plan = galleryTileLoadPlan(hasSmallTile || IS_IOS, position);
+		if (plan === 'near') {
+			return ' data-jzsa-near-src="' + url + '"';
+		}
+		return galleryThumbSrcAttr($container, url) +
+			(plan === 'lazy' ? ' loading="lazy"' : ' fetchpriority="' + plan + '"');
+	}
+
+	// Tiles loaded 'near' get their src once they are within about two screens.
+	var GALLERY_TILE_NEAR_MARGIN = '200% 0px';
+	function loadNearGalleryTile(img) {
+		var url = img.getAttribute('data-jzsa-near-src');
+		if (!url) {
+			return;
+		}
+		img.removeAttribute('data-jzsa-near-src');
+		var $gallery = $(img).closest('.jzsa-gallery-album');
+		if ($gallery.data('jzsaDirectMediaDeferred')) {
+			img.setAttribute('data-jzsa-src', url);
+		} else {
+			img.setAttribute('src', directMediaUrl(url));
+		}
+	}
+
+	function watchGalleryTilesNearScreen($container) {
+		var imgs = $container.find('img[data-jzsa-near-src]');
+		if (!imgs.length) {
+			return;
+		}
+		if (typeof window.IntersectionObserver !== 'function') {
+			imgs.each(function() { loadNearGalleryTile(this); });
+			return;
+		}
+		// A scrollable gallery scrolls inside itself: watch against its own box.
+		var root = $container.hasClass('jzsa-gallery-scrollable') ? $container[0] : null;
+		var observer = new window.IntersectionObserver(function(entries) {
+			entries.forEach(function(entry) {
+				if (entry.isIntersecting) {
+					observer.unobserve(entry.target);
+					loadNearGalleryTile(entry.target);
+				}
+			});
+		}, { root: root, rootMargin: GALLERY_TILE_NEAR_MARGIN });
+		var previous = $container.data('jzsaNearTileObserver');
+		if (previous) {
+			previous.disconnect();
+		}
+		$container.data('jzsaNearTileObserver', observer);
+		imgs.each(function() { observer.observe(this); });
 	}
 
 	function galleryTileLacksPixels(img, imageWidth, imageHeight) {
@@ -8424,13 +8482,12 @@
             } else {
                 mediaHtml =
                     '<img class="jzsa-gallery-thumb' + tileFillClass + '"' +
-                    galleryThumbSrcAttr($container, tileSrc) +
+                    galleryTileSrcAttrs($container, tileSrc, tileSrc !== baseSrc, position) +
                     galleryTileUpgradeAttrs(tileSrc, baseSrc) +
                     (tileSrc !== photo.full ? ' data-full-src="' + photo.full + '"' : '') +
                     ' data-index="' + globalIndex + '"' +
                     ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (globalIndex + 1) + '"' +
                     ' draggable="false"' +
-                    galleryTileLoadingAttr(tileSrc !== baseSrc, position) +
                     ' decoding="' + (IS_IOS ? 'sync' : 'async') + '"' +
                     ' referrerpolicy="no-referrer"' + tileStyleAttr + '>' +
                     (videoAsThumb ? buildVideoTileDurationHtml(photo) : '');
@@ -8499,6 +8556,7 @@
         } else {
             $container.html(html);
         }
+        watchGalleryTilesNearScreen($container);
         initPlyrInContainer($container);
         scheduleDurationPrefetch($container);
         showGalleryThumbsWhenLoaded($container);
@@ -8593,13 +8651,12 @@
                 } else {
                     mediaHtml =
                         '<img class="jzsa-gallery-thumb jzsa-justified-thumb"' +
-                        galleryThumbSrcAttr($container, tileSrc) +
+                        galleryTileSrcAttrs($container, tileSrc, tileSrc !== src, tilePosition++) +
                         galleryTileUpgradeAttrs(tileSrc, src) +
                         (tileSrc !== item.photo.full ? ' data-full-src="' + item.photo.full + '"' : '') +
                         ' data-index="' + item.index + '"' +
                         ' alt="' + mediaLabel.charAt(0).toUpperCase() + mediaLabel.slice(1) + ' ' + (item.index + 1) + '"' +
                         ' draggable="false"' +
-                        galleryTileLoadingAttr(tileSrc !== src, tilePosition++) +
                         ' decoding="' + (IS_IOS ? 'sync' : 'async') + '"' +
                         ' referrerpolicy="no-referrer"' +
                         ' style="width:100%;height:100%;">' +

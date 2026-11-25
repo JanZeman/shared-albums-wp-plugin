@@ -67,22 +67,26 @@ describe('gallery tile upgrade order', () => {
     });
 });
 
-describe('gallery tile loading attribute', () => {
-    function load(isIos) {
-        return loadHelpers(['galleryTileLoadingAttr'], { IS_IOS: isIos, GALLERY_TILE_EAGER_COUNT: 100, GALLERY_TILE_FIRST_SCREEN_COUNT: 12 }).galleryTileLoadingAttr;
-    }
-
-    test('Google tiles stay lazy except on iOS (April 2026 anti-flicker)', () => {
-        expect(load(false)(false, 0)).toBe(' loading="lazy"');
-        expect(load(true)(false, 500)).toBe('');
+describe('gallery tile load plan', () => {
+    const { galleryTileLoadPlan: plan } = loadHelpers(['galleryTileLoadPlan'], {
+        GALLERY_TILE_EAGER_COUNT: 100,
+        GALLERY_TILE_FIRST_SCREEN_COUNT: 12,
     });
 
-    test('iCloud thumbnails load right away on every platform, lazy only in very big albums', () => {
-        expect(load(false)(true, 0)).toBe(' fetchpriority="high"');
-        expect(load(true)(true, 11)).toBe(' fetchpriority="high"');
-        expect(load(true)(true, 12)).toBe(' fetchpriority="low"');
-        expect(load(false)(true, 99)).toBe(' fetchpriority="low"');
-        expect(load(false)(true, 100)).toBe(' loading="lazy"');
-        expect(load(true)(true, 100)).toBe(' loading="lazy"');
+    test('Google tiles on desktop and Android use the browser lazy loading', () => {
+        expect(plan(false, 0)).toBe('lazy');
+        expect(plan(false, 500)).toBe('lazy');
+    });
+
+    test('iCloud thumbnails and Google tiles on iOS: first 100 right away, first screen first', () => {
+        expect(plan(true, 0)).toBe('high');
+        expect(plan(true, 11)).toBe('high');
+        expect(plan(true, 12)).toBe('low');
+        expect(plan(true, 99)).toBe('low');
+    });
+
+    test('tiles after the first 100 load when they come within reach (no iOS flicker)', () => {
+        expect(plan(true, 100)).toBe('near');
+        expect(plan(true, 999)).toBe('near');
     });
 });
