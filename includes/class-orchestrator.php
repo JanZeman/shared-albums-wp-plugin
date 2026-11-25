@@ -570,6 +570,7 @@ class JZSA_Shared_Albums {
 
 		// Keep a long-lived backup so a temporary future failure can still serve data.
 		set_transient( $this->get_backup_cache_key( $album_url ), $fresh_cache_data, self::BACKUP_CACHE_TTL );
+		$this->remember_media_map( $album_url, $result['data']['photos'] );
 
 		// Store expiration duration for tracking
 		update_option( $expiry_key, $cache_duration, false );
@@ -2705,9 +2706,23 @@ class JZSA_Shared_Albums {
 			return false;
 		}
 
+		$stored = $this->build_media_map( $result['data']['photos'] );
+		$this->drop_album_cache_if_changed( $album_url, array_keys( $stored['urls'] ) );
+		$this->store_media_map( $map_key, $stored );
+
+		return $stored;
+	}
+
+	/**
+	 * Media URL map of fetched album items: id => rendition => URL, with its freshness.
+	 *
+	 * @param array $photos Album items as the provider returns them.
+	 * @return array urls, fresh_until, lifetime.
+	 */
+	private function build_media_map( $photos ) {
 		$map      = array();
 		$lifetime = PHP_INT_MAX;
-		foreach ( $result['data']['photos'] as $item ) {
+		foreach ( $photos as $item ) {
 			if ( empty( $item['id'] ) ) {
 				continue;
 			}
@@ -2730,16 +2745,40 @@ class JZSA_Shared_Albums {
 			$lifetime = self::MEDIA_URL_FALLBACK_TTL;
 		}
 
-		$this->drop_album_cache_if_changed( $album_url, array_keys( $map ) );
-
-		$stored = array(
+		return array(
 			'urls'        => $map,
 			'fresh_until' => time() + $lifetime,
+			'lifetime'    => $lifetime,
 		);
-		// Keep stale URLs for most of the buffer, while Apple still accepts them.
-		set_transient( $map_key, $stored, max( 60, $lifetime + self::MEDIA_URL_EXPIRY_BUFFER - 30 ) );
+	}
 
-		return $stored;
+	/**
+	 * Store a media URL map; stale URLs are kept for most of the buffer, while Apple still accepts them.
+	 *
+	 * @param string $map_key Transient name.
+	 * @param array  $stored  Map from build_media_map().
+	 */
+	private function store_media_map( $map_key, $stored ) {
+		$lifetime = $stored['lifetime'];
+		unset( $stored['lifetime'] );
+		set_transient( $map_key, $stored, max( 60, $lifetime + self::MEDIA_URL_EXPIRY_BUFFER - 30 ) );
+	}
+
+	/**
+	 * Keep the media URLs of an iCloud album fetched for the page, so the page's
+	 * request for them does not fetch the album from Apple a second time.
+	 *
+	 * @param string $album_url Album URL.
+	 * @param array  $photos    Album items just fetched.
+	 */
+	private function remember_media_map( $album_url, $photos ) {
+		if ( ! is_array( $photos ) || ! JZSA_ICloud_Provider::is_icloud_url( $album_url ) ) {
+			return;
+		}
+		$stored = $this->build_media_map( $photos );
+		if ( ! empty( $stored['urls'] ) ) {
+			$this->store_media_map( 'jzsa_media_' . md5( $album_url ), $stored );
+		}
 	}
 
 	/**
@@ -3137,6 +3176,7 @@ class JZSA_Shared_Albums {
 		list( $cached_data, $cache_ttl ) = $this->album_cache_entry( $album_url, $cached_data, $cache_duration );
 		set_transient( $cache_key, $cached_data, $cache_ttl );
 		set_transient( $this->get_backup_cache_key( $album_url ), $cached_data, self::BACKUP_CACHE_TTL );
+		$this->remember_media_map( $album_url, $result['data']['photos'] );
 
 		return array(
 			'success' => true,
@@ -4176,6 +4216,7 @@ class JZSA_Shared_Albums {
 
 		// Keep the long-lived backup in sync so future fallbacks stay fresh.
 		set_transient( $this->get_backup_cache_key( $album_url ), $refreshed_data, self::BACKUP_CACHE_TTL );
+		$this->remember_media_map( $album_url, $result['data']['photos'] );
 
 		// Prepare URLs with standard dimensions.
 		$hydrated_items = $this->hydrate_cached_photo_meta(

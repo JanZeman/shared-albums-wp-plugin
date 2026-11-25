@@ -349,6 +349,22 @@ class ICloudProviderTest extends TestCase {
 		$this->assertSame( '', $orchestrator->resolve_media_url( self::CLOUDKIT_ALBUM_URL, 'A1', 'Missing' ) );
 	}
 
+	public function test_album_fetch_keeps_its_media_urls_so_they_are_not_fetched_again(): void {
+		$orchestrator = new JZSA_Shared_Albums( JZSA_PLUGIN_FILE );
+		$this->stubCloudKitAlbum();
+
+		$fetch = ( new ReflectionClass( $orchestrator ) )->getMethod( 'get_cached_or_fresh_album_data' );
+		$this->assertTrue( $fetch->invoke( $orchestrator, self::CLOUDKIT_ALBUM_URL )['success'] );
+		$requests = count( $GLOBALS['jzsa_test_http_requests'] );
+
+		$this->assertSame(
+			'https://cvws.icloud-content.com/B/thumb1/IMG%201.jpg?o=1',
+			$orchestrator->resolve_media_url( self::CLOUDKIT_ALBUM_URL, 'A1', 'JPEGThumb' )
+		);
+		// The URLs come from the album fetch, not from a second one.
+		$this->assertCount( $requests, $GLOBALS['jzsa_test_http_requests'] );
+	}
+
 	public function test_media_refresh_drops_the_album_cache_when_items_changed_in_icloud(): void {
 		$cache_key = 'jzsa_album_' . md5( self::CLOUDKIT_ALBUM_URL );
 		$this->stubCloudKitAlbum();
