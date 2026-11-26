@@ -376,9 +376,17 @@
 		loader.referrerPolicy = 'no-referrer';
 		loader.fetchPriority = visible ? 'high' : 'low';
 		loader.onload = function() {
-			if (!done) {
-				done = true;
-				finishGalleryTileUpgrade(img, src);
+			if (done) {
+				return;
+			}
+			done = true;
+			// Swap only once the large photo is decoded. Otherwise Chrome on Android
+			// paints the tile empty for a moment between the thumbnail and the photo.
+			var swap = function() { finishGalleryTileUpgrade(img, src); };
+			if (typeof loader.decode === 'function') {
+				loader.decode().then(swap, swap);
+			} else {
+				swap();
 			}
 		};
 		loader.onerror = function() {
