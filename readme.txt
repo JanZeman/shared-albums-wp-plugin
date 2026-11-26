@@ -2,7 +2,7 @@
 Contributors: janzeman
 Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 7.0
 Stable tag: 3.0.18
 License: GPLv2 or later
