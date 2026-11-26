@@ -2,7 +2,7 @@
 Contributors: janzeman
 Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 7.0
 Stable tag: 3.0.18
 License: GPLv2 or later
@@ -142,6 +142,7 @@ Contact: support@janzeman.com
 * Faster albums: photos load as needed, not the whole album at once. iCloud gallery tiles show small previews first, then sharpen the ones on screen. Thanks to [@plauritz](https://profiles.wordpress.org/plauritz/).
 * Fixed: the lightbox of a carousel or slider with width and height cut off the photo.
 * Clearer Shared Albums icon in the admin menu.
+* Fixed: Google albums no longer fail on hosts without the PHP mbstring extension.
 
 = 3.0.12 =
 * Fixed: saving or publishing a page with albums could take very long or leave the block editor loading, especially with large Google Photos albums. Saving downloaded the albums again from Google Photos or iCloud, up to twice per album, although the block editor does not show them. Saving now only clears the album cache and takes about a second however large the albums are. Visitors see the albums as before, loaded fresh after the save. Reported in [GitHub issue #14](https://github.com/JanZeman/shared-albums-wp-plugin/issues/14).

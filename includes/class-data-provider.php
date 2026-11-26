@@ -967,6 +967,10 @@ class JZSA_Data_Provider {
 			$parts[ $index ] = preg_replace_callback(
 				'/\p{L}[\p{L}\p{M}]*/u',
 				static function ( $matches ) {
+					// Hosts without mbstring: ASCII-only fallback.
+					if ( ! function_exists( 'mb_strtolower' ) ) {
+						return ucfirst( strtolower( $matches[0] ) );
+					}
 					$word = mb_strtolower( $matches[0], 'UTF-8' );
 					return mb_strtoupper( mb_substr( $word, 0, 1, 'UTF-8' ), 'UTF-8' ) . mb_substr( $word, 1, null, 'UTF-8' );
 				},
