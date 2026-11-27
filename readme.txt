@@ -139,10 +139,12 @@ Contact: support@janzeman.com
 == Changelog ==
 
 = 3.0.20 =
+* Security: stricter URL check for photo metadata requests.
+
+= 3.0.19 =
 * Faster albums: photos load as needed, not the whole album at once. iCloud gallery tiles show small previews first, then sharpen the ones on screen. Thanks to [@plauritz](https://profiles.wordpress.org/plauritz/).
 * Fixed: the lightbox of a carousel or slider with width and height cut off the photo.
 * Clearer Shared Albums icon in the admin menu.
-* Security: stricter URL check for photo metadata requests.
 * Fixed: Google albums no longer fail on hosts without the PHP mbstring extension.
 
 = 3.0.12 =
@@ -388,7 +390,10 @@ Contact: support@janzeman.com
 == Upgrade Notice ==
 
 = 3.0.20 =
-Faster albums, especially iCloud. Security fix.
+Security fix. Update recommended.
+
+= 3.0.19 =
+Faster albums, especially iCloud.
 
 = 3.0.12 =
 Saving a page with albums no longer waits for the albums to download, so the block editor saves in about a second.
