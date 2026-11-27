@@ -3378,6 +3378,32 @@ class JZSA_Shared_Albums {
 	}
 
 	/**
+	 * Whether a URL is a Google Photos shared photo page that may be fetched.
+	 *
+	 * Requires https, the exact host photos.google.com, no credentials or port,
+	 * and a /share/ path, so that a host name hidden in the path or query is refused.
+	 *
+	 * @param string $url URL to check.
+	 * @return bool
+	 */
+	private function is_google_photo_page_url( $url ) {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+			return false;
+		}
+
+		if ( 'https' !== strtolower( $parts['scheme'] ) || 'photos.google.com' !== strtolower( $parts['host'] ) ) {
+			return false;
+		}
+
+		if ( isset( $parts['user'] ) || isset( $parts['pass'] ) || isset( $parts['port'] ) ) {
+			return false;
+		}
+
+		return isset( $parts['path'] ) && 0 === strpos( $parts['path'], '/share/' );
+	}
+
+	/**
 	 * Get cache key for per-photo metadata.
 	 *
 	 * @param string $photo_url Individual Google Photos page URL.
@@ -3957,8 +3983,8 @@ class JZSA_Shared_Albums {
 			return;
 		}
 
-		// Validate it's a Google Photos URL.
-		if ( false === strpos( $photo_url, 'photos.google.com/share/' ) ) {
+		// Only Google Photos share pages may be fetched (this endpoint is public).
+		if ( ! $this->is_google_photo_page_url( $photo_url ) ) {
 			wp_send_json_error( 'Invalid photo URL' );
 			return;
 		}
@@ -4044,7 +4070,8 @@ class JZSA_Shared_Albums {
 		$html = '';
 
 		if ( $need_exif_fetch || $need_description_fetch || ( $need_filename_fetch && ( 'video' === $media_type || empty( $media_url ) ) ) ) {
-			$response = wp_remote_get(
+			// wp_safe_remote_get() also refuses redirects to local or private addresses.
+			$response = wp_safe_remote_get(
 				$photo_url,
 				array(
 					'timeout'    => 15,

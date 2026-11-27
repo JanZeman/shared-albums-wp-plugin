@@ -208,6 +208,49 @@ class OrchestratorMediaAjaxTest extends TestCase {
 	        $this->assertSame( array(), $GLOBALS['jzsa_test_http_requests'] );
 	    }
 
+	    public function test_fetch_photo_meta_rejects_non_google_hosts_before_http_request(): void {
+	        $urls = array(
+	            'http://127.0.0.1:8901/photos.google.com/share/test',
+	            'https://127.0.0.1/photos.google.com/share/test',
+	            'https://evil.example/?photos.google.com/share/test',
+	            'https://photos.google.com.evil.example/share/test',
+	            'https://photos.google.com@127.0.0.1/share/test',
+	            'https://user:pass@photos.google.com/share/test',
+	            'https://photos.google.com:8443/share/test',
+	            'http://photos.google.com/share/test',
+	            'https://photos.google.com/u/0/photos.google.com/share/test',
+	        );
+
+	        foreach ( $urls as $url ) {
+	            $_POST = array(
+	                'nonce'     => 'ok',
+	                'photo_url' => $url,
+	            );
+	            $response = $this->callAjax( 'handle_fetch_photo_meta' );
+
+	            $this->assertFalse( $response->success, $url );
+	            $this->assertSame( 'Invalid photo URL', $response->data, $url );
+	        }
+	        $this->assertSame( array(), $GLOBALS['jzsa_test_http_requests'] );
+	    }
+
+	    public function test_fetch_photo_meta_uses_safe_http_request(): void {
+	        $photo_url = 'https://photos.google.com/share/AF1QipAlbum/photo/PHOTO1?key=abc';
+	        $GLOBALS['jzsa_test_http_responses'][ $photo_url ] = $this->response( 200, '<html>photo page</html>' );
+	        $_POST = array(
+	            'nonce'         => 'ok',
+	            'photo_url'     => $photo_url,
+	            'need_filename' => 'false',
+	        );
+
+	        $response = $this->callAjax( 'handle_fetch_photo_meta' );
+
+	        $this->assertTrue( $response->success );
+	        $this->assertCount( 1, $GLOBALS['jzsa_test_http_requests'] );
+	        $this->assertSame( $photo_url, $GLOBALS['jzsa_test_http_requests'][0]['url'] );
+	        $this->assertTrue( $GLOBALS['jzsa_test_http_requests'][0]['args']['reject_unsafe_urls'] );
+	    }
+
 	    public function test_fetch_photo_meta_fetches_exif_description_and_caches_result(): void {
 	        $photo_url = 'https://photos.google.com/share/AF1QipAlbum/photo/PHOTO1?key=abc';
 	        $GLOBALS['jzsa_test_http_responses'][ $photo_url ] = $this->response( 200, '<html>photo page</html>' );

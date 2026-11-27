@@ -498,6 +498,12 @@ $GLOBALS['jzsa_test_options']        = array();
 if ( ! function_exists( 'is_wp_error' ) ) {
     function is_wp_error( $thing ) { return $thing instanceof WP_Error; }
 }
+if ( ! function_exists( 'wp_safe_remote_get' ) ) {
+    function wp_safe_remote_get( $url, $args = array() ) {
+        $args['reject_unsafe_urls'] = true;
+        return wp_remote_get( $url, $args );
+    }
+}
 if ( ! function_exists( 'wp_remote_get' ) ) {
     function wp_remote_get( $url, $args = array() ) {
         $GLOBALS['jzsa_test_http_requests'][] = array(

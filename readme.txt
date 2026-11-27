@@ -4,7 +4,7 @@ Tags: google-photos, icloud, gallery, album, embed
 Requires at least: 5.5
 Tested up to: 7.2
 Requires PHP: 7.0
-Stable tag: 3.0.19
+Stable tag: 3.0.20
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -138,10 +138,11 @@ Contact: support@janzeman.com
 
 == Changelog ==
 
-= 3.0.19 =
+= 3.0.20 =
 * Faster albums: photos load as needed, not the whole album at once. iCloud gallery tiles show small previews first, then sharpen the ones on screen. Thanks to [@plauritz](https://profiles.wordpress.org/plauritz/).
 * Fixed: the lightbox of a carousel or slider with width and height cut off the photo.
 * Clearer Shared Albums icon in the admin menu.
+* Security: stricter URL check for photo metadata requests.
 * Fixed: Google albums no longer fail on hosts without the PHP mbstring extension.
 
 = 3.0.12 =
@@ -386,8 +387,8 @@ Contact: support@janzeman.com
 
 == Upgrade Notice ==
 
-= 3.0.19 =
-Faster albums, especially iCloud.
+= 3.0.20 =
+Faster albums, especially iCloud. Security fix.
 
 = 3.0.12 =
 Saving a page with albums no longer waits for the albums to download, so the block editor saves in about a second.
